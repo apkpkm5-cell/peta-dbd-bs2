@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Peta Sebaran DBD - Puskesmas Bontang Selatan II</title>
-<link rel="stylesheet" href="https://unpkg.com" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -115,7 +115,7 @@
   </div>
 
   <!-- 1. SCRIPT PETA BIASA (Pasti Jalan Bahkan Tanpa Server) -->
-  <script src="https://unpkg.com"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     document.getElementById('tanggal').valueAsDate = new Date();
     const pkmCoords = [0.1118, 117.4868];
