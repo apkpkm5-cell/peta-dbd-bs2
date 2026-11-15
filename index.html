@@ -199,9 +199,8 @@
     import { initializeApp } from "https://gstatic.com";
     import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://gstatic.com";
 
-    // Konfigurasi Firebase Proyek dbd-pkm-bs2
     const firebaseConfig = {
-      apiKey: "AIzaSyA9vLsY0D2ahTZ2sXWQXtqiiOt39uoOZmo",
+      apiKey: "AIzaSyA9vLsY0D2ahTZ2sXWQXnqiIOt39uoOZmo",
       authDomain: "://firebaseapp.com",
       projectId: "dbd-pkm-bs2",
       storageBucket: "dbd-pkm-bs2.firebasestorage.app",
@@ -247,7 +246,7 @@
 
       renderMapAndStats();
     }, (error) => {
-      document.getElementById('dbStatus').innerText = "Gagal terhubung ke database";
+      document.getElementById('dbStatus').innerText = "Error: " + error.code;
       document.getElementById('dbStatus').style.color = "#dc2626";
       console.error(error);
     });
@@ -269,7 +268,6 @@
         const color = item.status === "Aktif" ? "#dc2626" : "#16a34a";
         const nextStatus = item.status === "Aktif" ? "Ditangani" : "Aktif";
 
-        // Lingkaran Radius 100m
         L.circle([item.lat, item.lng], {
           color: color,
           fillColor: color,
@@ -277,7 +275,6 @@
           radius: 100
         }).addTo(markersLayer);
 
-        // Titik Kasus
         const marker = L.circleMarker([item.lat, item.lng], {
           radius: 8,
           fillColor: color,
@@ -292,83 +289,8 @@
           Tanggal: ${item.tanggal}<br/>
           Jumlah: <b>${item.jumlah} orang</b><br/>
           Status: <span style="color:${color}; font-weight:bold;">${item.status}</span><br/>
-          Lingkaran = Radius 100m PSN/Fogging
-Ubah ke ${nextStatus}
-Hapus
-`);
-});
-document.getElementById('totalTitik').innerText = currentCases.length;
-document.getElementById('totalKasus').innerText = totalKasus;
-document.getElementById('kasusAktif').innerText = aktifCount;
-const listEl = document.getElementById('rekapRtList');
-listEl.innerHTML = "";
-const entries = Object.entries(rekapMap);
-if (entries.length === 0) {
-listEl.innerHTML = "Belum ada data tercatat.";
-} else {
-entries.forEach(([wil, jml]) => {
-const li = document.createElement('li');
-li.innerHTML = ${wil}: <b>${jml} kasus</b>;
-listEl.appendChild(li);
-});
-}
-}
-// 4. Klik Peta untuk Ambil Koordinat
-map.on('click', function(e) {
-const { lat, lng } = e.latlng;
-document.getElementById('koordinat').value = ${lat.toFixed(6)}, ${lng.toFixed(6)};
-if (tempMarker) map.removeLayer(tempMarker);
-tempMarker = L.marker([lat, lng]).addTo(map).bindPopup("Titik baru dipilih").openPopup();
-});
-// 5. Simpan Data Baru ke Firebase (CREATE)
-document.getElementById('caseForm').addEventListener('submit', async function(e) {
-e.preventDefault();
-const coords = document.getElementById('koordinat').value.split(',');
-if (coords.length !== 2) return alert("Silakan klik lokasi pada peta terlebih dahulu!");
-const btn = document.getElementById('btnSubmit');
-btn.disabled = true;
-btn.innerText = "Menyimpan...";
-try {
-await addDoc(kasusCol, {
-kelurahan: document.getElementById('kelurahan').value,
-rtJalan: document.getElementById('rtJalan').value,
-tanggal: document.getElementById('tanggal').value,
-jumlah: parseInt(document.getElementById('jumlah').value),
-status: document.getElementById('status').value,
-lat: parseFloat(coords[0].trim()),
-lng: parseFloat(coords[1].trim()),
-createdAt: serverTimestamp()
-});
-if (tempMarker) map.removeLayer(tempMarker);
-this.reset();
-} catch (err) {
-alert("Gagal menyimpan data: " + err.message);
-} finally {
-btn.disabled = false;
-btn.innerText = "Simpan Titik Kasus";
-}
-});
-// 6. Update Status Penanganan di Firebase (UPDATE)
-window.ubahStatus = async function(id, statusBaru) {
-try {
-await updateDoc(doc(db, "kasus_dbd_bs2", id), { status: statusBaru });
-} catch (err) {
-alert("Gagal mengubah status: " + err.message);
-}
-};
-// 7. Hapus Titik dari Firebase (DELETE)
-window.hapusKasus = async function(id) {
-if (confirm("Yakin ingin menghapus titik kasus ini?")) {
-try {
-await deleteDoc(doc(db, "kasus_dbd_bs2", id));
-} catch (err) {
-alert("Gagal menghapus data: " + err.message);
-}
-}
-};
-// 8. Tombol Isi Contoh Simulasi Awal
-window.isiDataSimulasi = async function() {
-if (!confirm("Tambahkan 3 contoh titik simulasi di Berbas Tengah & Berbas Pantai?")) return;
+          <small><i>Lingkaran = Radius 100m PSN/Fogging</i></small><br/><br/>
+          if (!confirm("Tambahkan 3 contoh titik simulasi di Berbas Tengah & Berbas Pantai?")) return;
 const contoh = [
 { kelurahan: "Berbas Tengah", rtJalan: "RT 18 (Simulasi)", tanggal: "2026-11-12", jumlah: 2, status: "Aktif", lat: 0.1125, lng: 117.4855 },
 { kelurahan: "Berbas Tengah", rtJalan: "RT 07 (Simulasi)", tanggal: "2026-11-08", jumlah: 1, status: "Ditangani", lat: 0.1145, lng: 117.4882 },
@@ -392,9 +314,3 @@ document.body.appendChild(link);
 link.click();
 document.body.removeChild(link);
 };
-
-
-
-<FollowUp>
-Coba simpan dan jalankan kode tersebut di tablet Anda sekarang. Beri tahu jika tampilannya sudah muncul dengan status **"Terhubung (Cloud Aktif)"** agar kita lanjut ke langkah terakhir yaitu **mengunggahnya ke GitHub Pages**!
-</FollowUp>    
