@@ -216,3 +216,117 @@
         document.getElementById('dbStatus').innerText = "Terhubung (Cloud Aktif)";
         document.getElementById('dbStatus').style.color = "#16a34a";
         currentCases = (json.documents || []).map(fromFirestoreDoc);
+renderData();
+} catch (err) {
+document.getElementById('dbStatus').innerText = "Error: " + err.message;
+document.getElementById('dbStatus').style.color = "#dc2626";
+}
+}
+function renderData() {
+markersLayer.clearLayers();
+let totalPenderita = 0, totalAktif = 0;
+const rekap = {};
+currentCases.forEach((item) => {
+const isAktif = item.status === "Aktif";
+const color = isAktif ? "#dc2626" : "#16a34a";
+const jml = parseInt(item.jumlah) || 1;
+totalPenderita += jml;
+if (isAktif) totalAktif++;
+const key = ${item.kelurahan} - ${item.rtJalan};
+rekap[key] = (rekap[key] || 0) + jml;
+if (item.lat && item.lng) {
+L.circle([item.lat, item.lng], { color, fillColor: color, fillOpacity: 0.15, radius: 100 }).addTo(markersLayer);
+L.circleMarker([item.lat, item.lng], { radius: 8, fillColor: color, color: "#fff", weight: 2, fillOpacity: 1 })
+.addTo(markersLayer)
+.bindPopup(<b>Kel. ${item.kelurahan}</b><br/>${item.rtJalan}<br/>Tgl: ${item.tanggal} | ${jml} org<br/>Status: <b>${item.status}</b><br/><br/> <button onclick="ubahStatus('${item.id}','${item.status}')" style="background:#2563eb;color:#fff;padding:4px 8px;">Ubah Status</button> <button onclick="hapusKasus('${item.id}')" style="background:#dc2626;color:#fff;padding:4px 8px;">Hapus</button>);
+}
+});
+document.getElementById('totalTitik').innerText = currentCases.length;
+document.getElementById('totalKasus').innerText = totalPenderita;
+document.getElementById('kasusAktif').innerText = totalAktif;
+const list = document.getElementById('rekapRtList');
+list.innerHTML = Object.keys(rekap).length ? "" : "Belum ada data tercatat.";
+for (const [k, v] of Object.entries(rekap)) {
+list.innerHTML += <li>${k}: <b>${v} kasus</b></li>;
+}
+}
+document.getElementById('caseForm').addEventListener('submit', async (e) => {
+e.preventDefault();
+const parts = document.getElementById('koordinat').value.split(',').map(s => parseFloat(s.trim()));
+if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
+return alert("Format koordinat tidak valid. Contoh: 0.11125, 117.48645");
+}
+const btn = document.getElementById('btnSubmit');
+btn.disabled = true; btn.innerText = "Menyimpan...";
+try {
+const res = await fetch(BASE_URL, {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(toFirestoreFields({
+kelurahan: document.getElementById('kelurahan').value,
+rtJalan: document.getElementById('rtJalan').value,
+tanggal: document.getElementById('tanggal').value,
+jumlah: parseInt(document.getElementById('jumlah').value),
+status: document.getElementById('status').value,
+lat: parts[0],
+lng: parts[1]
+}))
+});
+if (!res.ok) throw new Error("Gagal simpan (" + res.status + ")");
+document.getElementById('caseForm').reset();
+document.getElementById('tanggal').valueAsDate = new Date();
+if (tempMarker) map.removeLayer(tempMarker);
+await loadData();
+} catch (err) {
+alert("Gagal menyimpan: " + err.message);
+}
+btn.disabled = false; btn.innerText = "Simpan Titik Kasus";
+});
+window.ubahStatus = async (id, st) => {
+const statusBaru = st === "Aktif" ? "Ditangani" : "Aktif";
+await fetch(${BASE_URL}/${id}?updateMask.fieldPaths=status, {
+method: "PATCH",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ fields: { status: { stringValue: statusBaru } } })
+});
+loadData();
+};
+window.hapusKasus = async (id) => {
+if (!confirm("Hapus data ini?")) return;
+await fetch(${BASE_URL}/${id}, { method: "DELETE" });
+loadData();
+};
+document.getElementById('btnDemo').onclick = async () => {
+const btn = document.getElementById('btnDemo');
+btn.innerText = "Menambah...";
+try {
+const res = await fetch(BASE_URL, {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(toFirestoreFields({
+kelurahan: "Berbas Tengah",
+rtJalan: "RT 18 / Jl. Hayam Wuruk",
+tanggal: "2026-11-15",
+jumlah: 2,
+status: "Aktif",
+lat: 0.1125,
+lng: 117.4875
+}))
+});
+if (!res.ok) throw new Error("Gagal (" + res.status + ")");
+await loadData();
+} catch (err) {
+alert("Error simulasi: " + err.message);
+}
+btn.innerText = "+ Isi Contoh Simulasi";
+};
+document.getElementById('btnExport').onclick = () => {
+if (!currentCases.length) return alert("Belum ada data.");
+let csv = "Kelurahan,RT/Jalan,Tanggal,Jumlah,Status,Lat,Lng\n";
+currentCases.forEach(c => csv += "${c.kelurahan}","${c.rtJalan}","${c.tanggal}",${c.jumlah},"${c.status}",${c.lat},${c.lng}\n);
+const a = document.createElement("a");
+a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+a.download = "Sebaran_DBD_BS2.csv";
+a.click();
+};
+loadData();
