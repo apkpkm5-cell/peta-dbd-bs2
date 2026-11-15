@@ -3,277 +3,224 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Peta Sebaran DBD - Kel. Berbas Tengah</title>
+  <title>Peta Sebaran DBD - Kelurahan Berbas Tengah</title>
 
-  <!-- 1. CSS Leaflet -->
+  <!-- Memuat CSS Peta (Lokal + Cadangan Multi-Server) -->
+  <link rel="stylesheet" href="leaflet.css" />
+  <link rel="stylesheet" href="https://cloudflare.com" />
   <link rel="stylesheet" href="https://jsdelivr.net" />
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { display: flex; flex-direction: column; height: 100vh; background: #f8fafc; }
-
-    /* Header */
-    header {
-      background: #b91c1c;
-      color: #ffffff;
-      padding: 14px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      z-index: 1000;
-    }
-    header h1 { font-size: 18px; font-weight: 700; }
-    header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-
-    /* Bar Status & Ringkasan */
-    .status-bar {
-      background: #fef2f2;
-      border-bottom: 1px solid #fecaca;
-      padding: 8px 20px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      color: #7f1d1d;
-      gap: 10px;
-    }
-    .badge-group { display: flex; gap: 10px; }
-    .badge {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 12px;
-      background: #ffffff;
-      border: 1px solid #fca5a5;
-    }
-
-    /* Area Peta */
-    #map { flex: 1; width: 100%; z-index: 1; }
-
-    /* Legenda & Petunjuk di Peta */
-    .legend {
-      background: white;
-      padding: 10px 14px;
-      border-radius: 8px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.2);
-      font-size: 12px;
-      line-height: 1.6;
-      color: #334155;
-    }
-    .dot {
-      height: 10px;
-      width: 10px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 6px;
-    }
-
-    /* Form Popup */
-    .popup-form input, .popup-form select, .popup-form button {
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background: #ffffff; color: #111827; }
+    header { background-color: #b91c1c; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    header h1 { margin: 0; font-size: 1.05rem; }
+    header small { display: block; font-size: 0.78rem; opacity: 0.9; font-weight: normal; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.82rem; }
+    .btn-export { background-color: #15803d; color: white; }
+    .btn-demo { background-color: #1d4ed8; color: white; }
+    .container { display: flex; flex: 1; overflow: hidden; }
+    #map { flex: 1; width: 100%; height: 100%; min-height: 340px; position: relative; z-index: 1; background: #e5e7eb; }
+    #sidebar { width: 360px; background: #f9fafb; border-left: 1px solid #e5e7eb; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .info-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 9px 10px; font-size: 0.82rem; color: #7f1d1d; }
+    form { display: flex; flex-direction: column; gap: 10px; }
+    label { font-size: 0.82rem; font-weight: 600; color: #1f2937; display: block; margin-bottom: 3px; }
+    input, select {
       width: 100%;
-      margin-top: 6px;
-      padding: 6px 8px;
-      font-size: 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
+      padding: 9px 10px;
+      border: 1px solid #9ca3af;
+      border-radius: 6px;
+      font-size: 0.92rem;
+      background-color: #ffffff;
+      color: #111827;
+      min-height: 40px;
     }
-    .popup-form button {
-      background: #b91c1c;
-      color: white;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 8px;
+    input[readonly] { background-color: #e5e7eb; color: #374151; }
+    .btn-submit { background-color: #dc2626; color: white; padding: 11px; margin-top: 4px; font-size: 0.92rem; }
+    .card-box { background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px; font-size: 0.84rem; }
+    .card-box p { margin: 5px 0; }
+    .rt-list { margin: 6px 0 0 0; padding-left: 18px; max-height: 150px; overflow-y: auto; }
+    .legend { position: absolute; bottom: 16px; right: 10px; z-index: 1000; background: white; padding: 8px 10px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); font-size: 0.74rem; line-height: 1.45; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+    @media (max-width: 768px) {
+      body { height: auto; min-height: 100vh; }
+      .container { flex-direction: column; overflow: visible; }
+      #map { height: 340px; min-height: 340px; flex: none; }
+      #sidebar { width: 100%; height: auto; overflow: visible; border-left: none; border-top: 1px solid #e5e7eb; }
     }
-    .popup-form button:hover { background: #991b1b; }
   </style>
 </head>
 <body>
 
-  <!-- Bagian Atas -->
   <header>
     <div>
-      <h1>Peta Sebaran Kasus DBD</h1>
-      <p>Wilayah Kerja Puskesmas Bontang Selatan II &bull; Kel. Berbas Tengah</p>
+      <h1>Pemetaan Kasus DBD - Kelurahan Berbas Tengah</h1>
+      <small>Wilayah Kerja Puskesmas Bontang Selatan II</small>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn-demo" onclick="isiDataSimulasi()">+ Isi Contoh Simulasi</button>
+      <button type="button" class="btn-export" onclick="exportToCSV()">Unduh Excel (CSV)</button>
     </div>
   </header>
 
-  <!-- Bar Informasi & Statistik -->
-  <div class="status-bar">
-    <div id="info">Status: Memuat sistem peta...</div>
-    <div class="badge-group">
-      <span class="badge" style="color:#b91c1c;">Positif DBD: <span id="count-positif">0</span></span>
-      <span class="badge" style="color:#d97706;">Suspek / Pantauan: <span id="count-suspek">0</span></span>
-      <span class="badge" style="color:#15803d;">Sembuh: <span id="count-sembuh">0</span></span>
+  <div class="container">
+    <div id="map">
+      <div class="legend">
+        <strong>Keterangan Peta:</strong><br/>
+        <span class="dot" style="background:#2563eb;"></span>Puskesmas Bontang Selatan II<br/>
+        <span class="dot" style="background:#dc2626;"></span>Kasus DBD Aktif (+ Radius 100m)<br/>
+        <span class="dot" style="background:#16a34a;"></span>Sudah Ditangani (+ Radius 100m)
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="info-box">
+        <strong>Petunjuk:</strong> Ketuk/klik titik lokasi di peta untuk mengisi koordinat otomatis, pilih RT, lalu simpan.
+      </div>
+
+      <div class="card-box">
+        <strong>Status Sistem & Filter RT:</strong>
+        <p>Peta: <span id="mapStatus" style="color:#d97706; font-weight:bold;">Memuat peta...</span></p>
+        <p>Firebase: <span id="dbStatus" style="color:#d97706; font-weight:bold;">Menghubungkan...</span></p>
+        <div style="margin: 8px 0;">
+          <select id="filterRt" onchange="renderMapAndStats()">
+            <option value="SEMUA" selected>-- Tampilkan Semua RT (Berbas Tengah) --</option>
+          </select>
+        </div>
+        <p>Total Titik Lokasi: <b id="totalTitik">0</b> titik</p>
+        <p>Total Penderita: <b id="totalKasus">0</b> orang</p>
+        <p>Kasus Aktif: <b id="kasusAktif" style="color:#dc2626;">0</b> lokasi</p>
+      </div>
+
+      <form id="caseForm">
+        <div>
+          <label for="pilihRt">Pilih Nomor RT (Kel. Berbas Tengah)</label>
+          <select id="pilihRt" required></select>
+        </div>
+        <div>
+          <label for="jalan">Nama Jalan / Gang / Patokan</label>
+          <input type="text" id="jalan" placeholder="Contoh: Jl. Hayam Wuruk Gg. 2" required />
+        </div>
+        <div>
+          <label for="tanggal">Tanggal Laporan</label>
+          <input type="date" id="tanggal" required />
+        </div>
+        <div>
+          <label for="jumlah">Jumlah Kasus (Orang)</label>
+          <input type="number" id="jumlah" min="1" value="1" required />
+        </div>
+        <div>
+          <label for="status">Status Penanganan</label>
+          <select id="status">
+            <option value="Aktif" selected>Kasus Aktif (Perlu Fogging/PSN)</option>
+            <option value="Ditangani">Sudah Ditangani / Selesai</option>
+          </select>
+        </div>
+        <div>
+          <label for="koordinat">Koordinat (Klik di Peta)</label>
+          <input type="text" id="koordinat" placeholder="Klik lokasi di peta..." readonly required />
+        </div>
+        <button type="submit" class="btn-submit" id="btnSubmit">Simpan Titik Kasus</button>
+      </form>
+
+      <div class="card-box">
+        <strong>Rekap Sebaran Kasus per RT:</strong>
+        <ul class="rt-list" id="rekapRtList">
+          <li>Belum ada data tercatat.</li>
+        </ul>
+      </div>
     </div>
   </div>
 
-  <!-- Wadah Peta -->
-  <div id="map"></div>
-
-  <!-- 2. JS Leaflet -->
-  <script src="https://jsdelivr.net"></script>
-
   <script>
-    const infoEl = document.getElementById('info');
+    // 1. Isi Daftar RT 01 - RT 62 Otomatis via JavaScript
+    (function buatDaftarRT() {
+      const pilihRtEl = document.getElementById('pilihRt');
+      const filterRtEl = document.getElementById('filterRt');
+      for (let i = 1; i <= 62; i++) {
+        const namaRt = "RT " + String(i).padStart(2, '0');
+        pilihRtEl.add(new Option(namaRt, namaRt, i === 1, i === 1));
+        filterRtEl.add(new Option("Filter: " + namaRt, namaRt));
+      }
+    })();
 
-    // Pastikan library Leaflet berhasil dimuat
-    if (typeof L === 'undefined') {
-      infoEl.innerText = "Status: GAGAL memuat peta. Periksa koneksi internet Anda.";
-      infoEl.style.color = "red";
-    } else {
-      // Koordinat Pusat: Puskesmas Bontang Selatan II / Kel. Berbas Tengah
-      const pkmCoords = [0.1118, 117.4868];
+    // 2. Konfigurasi Firebase Firestore
+    const PROJECT_ID = "dbd-pkm-bs2";
+    const COLLECTION = "kasus_dbd_bs2";
+    const BASE_URL = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/${COLLECTION}`;
 
-      // Inisialisasi Peta
-      const map = L.map('map').setView(pkmCoords, 15);
+    const mapStatusEl = document.getElementById('mapStatus');
+    const dbStatusEl = document.getElementById('dbStatus');
+    const pkmCoords = [0.1118, 117.4868];
+    let map = null;
+    let markersLayer = null;
+    let tempMarker = null;
+    let currentCases = [];
+    let selectedLat = null;
+    let selectedLng = null;
 
-      // Peta Dasar OpenStreetMap
+    // 3. Multi-Sumber Library Peta (Mencoba file lokal dulu, lalu 3 server CDN berbeda)
+    const sumberLeaflet = [
+      "leaflet.js",
+      "https://cloudflare.com",
+      "https://jsdelivr.net",
+      "https://unpkg.com"
+    ];
+
+    function muatLeaflet(index = 0) {
+      if (typeof L !== 'undefined') {
+        inisialisasiPeta();
+        return;
+      }
+      if (index >= sumberLeaflet.length) {
+        mapStatusEl.innerText = "Gagal (Upload leaflet.js ke GitHub)";
+        mapStatusEl.style.color = "#dc2626";
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = sumberLeaflet[index];
+      script.onload = () => {
+        if (typeof L !== 'undefined') {
+          inisialisasiPeta();
+        } else {
+          muatLeaflet(index + 1);
+        }
+      };
+      script.onerror = () => muatLeaflet(index + 1);
+      document.body.appendChild(script);
+    }
+
+    function inisialisasiPeta() {
+      mapStatusEl.innerText = "Aktif";
+      mapStatusEl.style.color = "#16a34a";
+
+      map = L.map('map').setView(pkmCoords, 15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
-      // Penanda Khusus Puskesmas Bontang Selatan II
-      const pkmIcon = L.divIcon({
-        html: '<div style="background:#1d4ed8;color:white;padding:4px 8px;border-radius:6px;font-weight:bold;font-size:11px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🏥 PKM Bontang Selatan II</div>',
-        className: '',
-        iconAnchor: [60, 15]
-      });
+      // Pastikan ukuran peta penuh di iPad & HP
+      setTimeout(() => { map.invalidateSize(); }, 500);
 
-      L.marker(pkmCoords, { icon: pkmIcon }).addTo(map)
-        .bindPopup("<b>Puskesmas Bontang Selatan II</b><br>Kelurahan Berbas Tengah, Kec. Bontang Selatan");
+      L.circleMarker(pkmCoords, {
+        radius: 10, fillColor: "#2563eb", color: "#ffffff", weight: 3, fillOpacity: 1
+      }).addTo(map).bindPopup("<strong>Puskesmas Bontang Selatan II</strong><br/>Kelurahan Berbas Tengah");
 
-      // Data Contoh Awal (Bisa diganti/ditambah dari Firebase)
-      let dataKasus = [
-        { nama: "Contoh Kasus 1", rt: "RT 12", status: "Positif", tanggal: "2026-11-10", lat: 0.1128, lng: 117.4855 },
-        { nama: "Contoh Kasus 2", rt: "RT 08", status: "Suspek", tanggal: "2026-11-12", lat: 0.1105, lng: 117.4880 },
-        { nama: "Contoh Kasus 3", rt: "RT 15", status: "Sembuh", tanggal: "2026-11-01", lat: 0.1135, lng: 117.4875 }
-      ];
+      markersLayer = L.layerGroup().addTo(map);
 
-      // Layer Group untuk menampung titik kasus
-      const kasusLayer = L.layerGroup().addTo(map);
-
-      // Fungsi menentukan warna berdasarkan status
-      function getWarnaStatus(status) {
-        if (status === "Positif") return "#dc2626"; // Merah
-        if (status === "Suspek") return "#f59e0b";  // Kuning/Oranye
-        return "#16a34a";                           // Hijau (Sembuh)
-      }
-
-      // Fungsi menggambar ulang semua titik dan menghitung statistik
-      function renderKasus() {
-        kasusLayer.clearLayers();
-        let jmlPositif = 0, jmlSuspek = 0, jmlSembuh = 0;
-
-        dataKasus.forEach((item, index) => {
-          if (item.status === "Positif") jmlPositif++;
-          else if (item.status === "Suspek") jmlSuspek++;
-          else jmlSembuh++;
-
-          const warna = getWarnaStatus(item.status);
-
-          // Buat lingkaran titik kasus + radius 100m (area kewaspadaan fogging/PSN)
-          const marker = L.circleMarker([item.lat, item.lng], {
-            radius: 9,
-            fillColor: warna,
-            color: "#ffffff",
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.9
-          });
-
-          // Radius 100 meter untuk pemantauan jentik sekitar rumah kasus positif
-          if (item.status === "Positif") {
-            L.circle([item.lat, item.lng], {
-              radius: 100,
-              color: "#dc2626",
-              weight: 1,
-              fillColor: "#dc2626",
-              fillOpacity: 0.12
-            }).addTo(kasusLayer);
-          }
-
-          marker.bindPopup(`
-            <div style="font-size:13px;line-height:1.5;">
-              <b>${item.nama}</b> (${item.rt})<br>
-              Status: <b style="color:${warna};">${item.status}</b><br>
-              Tanggal: ${item.tanggal}<br>
-              <small style="color:#64748b;">Koordinat: ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</small>
-            </div>
-          `);
-
-          marker.addTo(kasusLayer);
-        });
-
-        document.getElementById('count-positif').innerText = jmlPositif;
-        document.getElementById('count-suspek').innerText = jmlSuspek;
-        document.getElementById('count-sembuh').innerText = jmlSembuh;
-      }
-
-      // Tampilkan data awal
-      renderKasus();
-
-      // Fitur Klik Peta untuk Tambah Titik Kasus Baru
       map.on('click', function(e) {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
+        selectedLat = Number(e.latlng.lat.toFixed(6));
+        selectedLng = Number(e.latlng.lng.toFixed(6));
+        document.getElementById('koordinat').value = `${selectedLat}, ${selectedLng}`;
 
-        const formHtml = `
-          <div class="popup-form" style="width:190px;">
-            <b>Tambah Titik Kasus DBD</b>
-            <input type="text" id="in-nama" placeholder="Inisial / Nama Pasien" />
-            <input type="text" id="in-rt" placeholder="Nomor RT (misal: RT 05)" />
-            <select id="in-status">
-              <option value="Positif">Positif DBD (Radius 100m)</option>
-              <option value="Suspek">Suspek / Pantauan</option>
-              <option value="Sembuh">Sembuh</option>
-            </select>
-            <button type="button" onclick="simpanTitikBaru(${lat}, ${lng})">Simpan Titik</button>
-          </div>
-        `;
-
-        L.popup()
-          .setLatLng(e.latlng)
-          .setContent(formHtml)
-          .openOn(map);
+        if (tempMarker) map.removeLayer(tempMarker);
+        tempMarker = L.circleMarker([selectedLat, selectedLng], {
+          radius: 8, fillColor: "#f59e0b", color: "#ffffff", weight: 2, fillOpacity: 1
+        }).addTo(map).bindPopup("Titik dipilih").openPopup();
       });
 
-      // Fungsi global untuk menyimpan titik baru ke peta
-      window.simpanTitikBaru = function(lat, lng) {
-        const nama = document.getElementById('in-nama').value.trim() || "Pasien Baru";
-        const rt = document.getElementById('in-rt').value.trim() || "-";
-        const status = document.getElementById('in-status').value;
-        const today = new Date().toISOString().split('T')[0];
-
-        dataKasus.push({ nama, rt, status, tanggal: today, lat, lng });
-        renderKasus();
-        map.closePopup();
-        infoEl.innerText = `Status: Titik baru (${nama} - ${rt}) berhasil ditambahkan!`;
-      };
-
-      // Tambahkan Legenda di Pojok Kanan Bawah
-      const legend = L.control({ position: 'bottomright' });
-      legend.onAdd = function() {
-        const div = L.DomUtil.create('div', 'legend');
-        div.innerHTML = `
-          <b>Keterangan Peta:</b><br>
-          <span class="dot" style="background:#dc2626;"></span> Positif DBD (+ Radius 100m)<br>
-          <span class="dot" style="background:#f59e0b;"></span> Suspek / Pantauan<br>
-          <span class="dot" style="background:#16a34a;"></span> Sembuh<br>
-          <hr style="margin:6px 0;border:0;border-top:1px solid #e2e8f0;">
-          <i>Klik di mana saja pada peta untuk menambah titik kasus.</i>
-        `;
-        return div;
-      };
-      legend.addTo(map);
-
-      infoEl.innerText = "Status: Peta aktif. Klik lokasi di peta untuk menambah data.";
-      infoEl.style.color = "#15803d";
+      renderMapAndStats();
     }
-  </script>
 
-</body>
-</html>
