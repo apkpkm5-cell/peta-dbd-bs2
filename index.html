@@ -6,8 +6,7 @@
   <title>Peta Sebaran DBD - Puskesmas Bontang Selatan II</title>
   
   <!-- Leaflet CSS -->
-   
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -198,7 +197,7 @@
   <!-- Firebase SDK (Modular) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // Konfigurasi Firebase Proyek dbd-pkm-bs2
     const firebaseConfig = {
@@ -218,6 +217,8 @@ import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc
     // 1. Inisialisasi Peta di Puskesmas Bontang Selatan II (Berbas Tengah)
     const pkmCoords = [0.1118, 117.4868];
     const map = L.map('map').setView(pkmCoords, 15);
+    setTimeout(() => map.invalidateSize(), 300);
+    window.addEventListener('resize', () => map.invalidateSize());
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
@@ -396,6 +397,7 @@ document.body.removeChild(link);
 
 
 
-<FollowUp>
-Coba simpan dan jalankan kode tersebut di tablet Anda sekarang. Beri tahu jika tampilannya sudah muncul dengan status **"Terhubung (Cloud Aktif)"** agar kita lanjut ke langkah terakhir yaitu **mengunggahnya ke GitHub Pages**!
-</FollowUp>    
+
+  </script>
+</body>
+</html>
