@@ -3,40 +3,70 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Peta Sebaran DBD - Kelurahan Berbas Tengah</title>
-  <link rel="stylesheet" href="https://unpkg.com" crossorigin="" />
+  <title>Tes Peta - Kel. Berbas Tengah</title>
+  <link rel="stylesheet" href="https://unpkg.com" />
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
-    header { background-color: #b91c1c; color: white; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-    header h1 { margin: 0; font-size: 1.05rem; }
-    header small { display: block; font-size: 0.78rem; opacity: 0.9; font-weight: normal; }
-    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    button { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 0.82rem; }
-    .btn-export { background-color: #15803d; color: white; }
-    .btn-demo { background-color: #1d4ed8; color: white; }
-    .container { display: flex; flex: 1; overflow: hidden; }
-    #sidebar { width: 350px; background: #f9fafb; border-right: 1px solid #e5e7eb; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-    .info-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 9px 10px; font-size: 0.82rem; color: #7f1d1d; }
-    form { display: flex; flex-direction: column; gap: 9px; }
-    label { font-size: 0.82rem; font-weight: 600; color: #374151; }
-    input, select { width: 100%; padding: 7px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.88rem; }
-    input[readonly] { background-color: #e5e7eb; color: #374151; }
-    .btn-submit { background-color: #dc2626; color: white; padding: 10px; margin-top: 4px; }
-    .card-box { background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; font-size: 0.82rem; }
-    .card-box p { margin: 4px 0; }
-    .rt-list { margin: 6px 0 0 0; padding-left: 16px; max-height: 130px; overflow-y: auto; }
-    #map { flex: 1; width: 100%; height: 100%; min-height: 350px; position: relative; z-index: 1; background: #e5e7eb; }
-    .legend { position: absolute; bottom: 20px; right: 12px; z-index: 1000; background: white; padding: 10px 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); font-size: 0.78rem; line-height: 1.5; }
-    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-    @media (max-width: 768px) {
-      .container { flex-direction: column-reverse; }
-      #sidebar { width: 100%; height: 55%; border-right: none; border-top: 1px solid #e5e7eb; }
-      #map { height: 45%; min-height: 280px; }
-    }
+    body { margin: 0; padding: 0; font-family: sans-serif; }
+    #header { background: #b91c1c; color: white; padding: 12px; font-size: 14px; }
+    #status { background: #fef2f2; color: #7f1d1d; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #fecaca; }
+    #map { width: 100%; height: 80vh; background: #e5e7eb; }
   </style>
 </head>
 <body>
+
+  <div id="header">
+    <strong>Peta Sebaran DBD - Kelurahan Berbas Tengah</strong>
+  </div>
+  <div id="status">Status Peta & Firebase: <span id="info">Memuat...</span></div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com"></script>
+  <script>
+    const infoEl = document.getElementById('info');
+
+    // 1. Cek apakah library peta berhasil dimuat
+    if (typeof L === 'undefined') {
+      infoEl.innerText = "GAGAL memuat library peta (unpkg terblokir/offline).";
+      infoEl.style.color = "red";
+    } else {
+      // 2. Tampilkan Peta Berbas Tengah
+      const pkmCoords = [0.1118, 117.4868];
+      const map = L.map('map').setView(pkmCoords, 15);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+
+      L.marker(pkmCoords).addTo(map)
+        .bindPopup("Puskesmas Bontang Selatan II<br>Kel. Berbas Tengah")
+        .openPopup();
+
+      infoEl.innerText = "Peta tampil! Mengecek Firebase...";
+      infoEl.style.color = "green";
+
+      // 3. Cek Koneksi Firebase
+      const url = "https://googleapis.com";
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            infoEl.innerText = "Peta OK | Firebase Error: " + data.error.message;
+            infoEl.style.color = "red";
+          } else {
+            const jumlah = data.documents ? data.documents.length : 0;
+            infoEl.innerText = `Peta OK | Firebase Terhubung (${jumlah} data ditemukan)`;
+            infoEl.style.color = "green";
+          }
+        })
+        .catch(err => {
+          infoEl.innerText = "Peta OK | Gagal Konek Firebase: " + err.message;
+          infoEl.style.color = "red";
+        });
+    }
+  </script>
+</body>
+</html>
+
 
   <header>
     <div>
