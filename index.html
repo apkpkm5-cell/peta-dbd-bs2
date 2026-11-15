@@ -117,10 +117,10 @@
   <header>
     <div>
       <h1>Pemetaan Kasus DBD - Puskesmas Bontang Selatan II</h1>
-      <small>Wilayah Kerja: Kel. Berbas Tengah & Kel. Berbas Pantai</small>
+      <small>Wilayah Kerja: Kelurahan Berbas Tengah</small>
     </div>
     <div class="header-actions">
-      <button class="btn-demo" onclick="isiDataSimulasi()">+ Isi Contoh Simulasi</button>
+      <button class="btn-demo" onclick="isiDataSimulasi()">+ Isi 1 Contoh Simulasi</button>
       <button class="btn-export" onclick="exportToCSV()">Unduh Excel (CSV)</button>
     </div>
   </header>
@@ -132,16 +132,17 @@
       </div>
 
       <form id="caseForm">
-        <div>
-          <label>Kelurahan</label>
-          <select id="kelurahan" required>
-            <option value="Berbas Tengah">Berbas Tengah</option>
-            <option value="Berbas Pantai">Berbas Pantai</option>
-          </select>
+        <input type="hidden" id="kelurahan" value="Berbas Tengah" />
+        <div class="info-box" style="margin:0;">
+          <strong>Kelurahan:</strong> Berbas Tengah
         </div>
         <div>
           <label>Nomor RT & Jalan / Gang</label>
-          <input type="text" id="rtJalan" placeholder="Contoh: RT 18 / Jl. Hayam Wuruk" required />
+          <input type="text" id="rtJalan" placeholder="Contoh: RT 02 / Gg. Melati" required />
+        </div>
+        <div>
+          <label>Nomor Rumah</label>
+          <input type="text" id="nomorRumah" placeholder="Contoh: 12 atau 12A" required />
         </div>
         <div>
           <label>Tanggal Laporan</label>
@@ -261,11 +262,12 @@
       let aktifCount = 0;
       const rekapMap = {};
 
-      currentCases.forEach((item) => {
+      const areaCases = currentCases.filter(item => item.kelurahan === "Berbas Tengah");
+      areaCases.forEach((item) => {
         totalKasus += Number(item.jumlah);
         if (item.status === "Aktif") aktifCount++;
 
-        const keyWilayah = `${item.kelurahan} - ${item.rtJalan}`;
+        const keyWilayah = `${item.rtJalan} - No. Rumah ${item.nomorRumah || "belum diisi"}`;
         rekapMap[keyWilayah] = (rekapMap[keyWilayah] || 0) + Number(item.jumlah);
 
         const color = item.status === "Aktif" ? "#dc2626" : "#16a34a";
@@ -290,7 +292,8 @@
 
         marker.bindPopup(`
           <strong>Kel. ${item.kelurahan}</strong><br/>
-          Lokasi: ${item.rtJalan}<br/>
+          RT / Jalan / Gang: ${item.rtJalan}<br/>
+          Nomor Rumah: ${item.nomorRumah || "Belum diisi"}<br/>
           Tanggal: ${item.tanggal}<br/>
           Jumlah: <b>${item.jumlah} orang</b><br/>
           Status: <span style="color:${color}; font-weight:bold;">${item.status}</span><br/>
@@ -370,11 +373,9 @@ alert("Gagal menghapus data: " + err.message);
 };
 // 8. Tombol Isi Contoh Simulasi Awal
 window.isiDataSimulasi = async function() {
-if (!confirm("Tambahkan 3 contoh titik simulasi di Berbas Tengah & Berbas Pantai?")) return;
+if (!confirm("Tambahkan 1 titik contoh SIMULASI di Berbas Tengah?")) return;
 const contoh = [
-{ kelurahan: "Berbas Tengah", rtJalan: "RT 18 (Simulasi)", tanggal: "2026-11-12", jumlah: 2, status: "Aktif", lat: 0.1125, lng: 117.4855 },
-{ kelurahan: "Berbas Tengah", rtJalan: "RT 07 (Simulasi)", tanggal: "2026-11-08", jumlah: 1, status: "Ditangani", lat: 0.1145, lng: 117.4882 },
-{ kelurahan: "Berbas Pantai", rtJalan: "RT 03 (Simulasi)", tanggal: "2026-11-14", jumlah: 2, status: "Aktif", lat: 0.1055, lng: 117.4915 }
+{ kelurahan: "Berbas Tengah", rtJalan: "RT 02 (SIMULASI)", nomorRumah: "12 (SIMULASI)", tanggal: new Date().toISOString().slice(0, 10), jumlah: 1, status: "Aktif", lat: 0.1125, lng: 117.4855 }
 ];
 for (const item of contoh) {
 await addDoc(kasusCol, { ...item, createdAt: serverTimestamp() });
@@ -382,9 +383,9 @@ await addDoc(kasusCol, { ...item, createdAt: serverTimestamp() });
 };
 // 9. Ekspor ke CSV / Excel
 window.exportToCSV = function() {
-let csvContent = "data:text/csv;charset=utf-8,Kelurahan,RT/Jalan,Tanggal,Jumlah Kasus,Status,Latitude,Longitude\n";
-currentCases.forEach(row => {
-csvContent += `"${row.kelurahan}","${row.rtJalan}","${row.tanggal}",${row.jumlah},"${row.status}",${row.lat},${row.lng}\n`;
+let csvContent = "data:text/csv;charset=utf-8,Kelurahan,RT/Jalan,Nomor Rumah,Tanggal,Jumlah Kasus,Status,Latitude,Longitude\n";
+currentCases.filter(row => row.kelurahan === "Berbas Tengah").forEach(row => {
+csvContent += `"${row.kelurahan}","${row.rtJalan}","${row.nomorRumah || ""}","${row.tanggal}",${row.jumlah},"${row.status}",${row.lat},${row.lng}\n`;
 });
 const encodedUri = encodeURI(csvContent);
 const link = document.createElement("a");
