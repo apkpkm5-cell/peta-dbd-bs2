@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Peta Sebaran DBD - Puskesmas Bontang Selatan II</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script>
+    document.write('<link rel="stylesheet" href="https:' + '//://unpkg.com" />');
+  </script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -15,6 +17,7 @@
     button { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 0.82rem; }
     .btn-export { background-color: #15803d; color: white; }
     .btn-demo { background-color: #1d4ed8; color: white; }
+    .btn-gps { background-color: #0284c7; color: white; width: 100%; margin-top: 4px; padding: 6px; font-size: 0.78rem; }
     .container { display: flex; flex: 1; overflow: hidden; }
     #sidebar { width: 340px; background: #f9fafb; border-right: 1px solid #e5e7eb; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
     .info-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 9px 10px; font-size: 0.82rem; color: #7f1d1d; }
@@ -30,8 +33,8 @@
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
     @media (max-width: 768px) {
       .container { flex-direction: column-reverse; }
-      #sidebar { width: 100%; height: 50%; border-right: none; border-top: 1px solid #e5e7eb; }
-      #map { height: 50%; }
+      #sidebar { width: 100%; height: 55%; border-right: none; border-top: 1px solid #e5e7eb; }
+      #map { height: 45%; }
     }
   </style>
 </head>
@@ -51,7 +54,7 @@
   <div class="container">
     <div id="sidebar">
       <div class="info-box">
-        <strong>Petunjuk:</strong> Klik titik lokasi pada peta untuk mengisi koordinat otomatis, lalu isi form dan simpan ke database cloud.
+        <strong>Cara Isi Koordinat:</strong> Klik titik di peta, tempel koordinat Google Maps, atau gunakan GPS.
       </div>
 
       <form id="caseForm">
@@ -82,8 +85,9 @@
           </select>
         </div>
         <div>
-          <label>Koordinat (Klik di Peta)</label>
-          <input type="text" id="koordinat" placeholder="Klik lokasi di peta..." readonly required />
+          <label>Koordinat (Klik Peta / Ketik / GPS)</label>
+          <input type="text" id="koordinat" placeholder="Contoh: 0.11125, 117.48645" required />
+          <button type="button" class="btn-gps" id="btnGps">📍 Ambil Lokasi GPS Saya Saat Ini</button>
         </div>
         <button type="submit" class="btn-submit" id="btnSubmit">Simpan Titik Kasus</button>
       </form>
@@ -114,134 +118,101 @@
     </div>
   </div>
 
-  <!-- 1. SCRIPT PETA BIASA (Pasti Jalan Bahkan Tanpa Server) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- HANYA MEMANGGIL LEAFLET PETA -->
+  <script>
+    document.write('<script src="https:' + '//://unpkg.com"><\/script>');
+  </script>
+
   <script>
     document.getElementById('tanggal').valueAsDate = new Date();
-    const pkmCoords = [0.1118, 117.4868];
+
+    // 1. INISIALISASI PETA
+    const pkmCoords = [0.11125, 117.48645];
     const map = L.map('map').setView(pkmCoords, 15);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https:' + '//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     L.circleMarker(pkmCoords, {
       radius: 10, fillColor: "#2563eb", color: "#ffffff", weight: 3, fillOpacity: 1
-    }).addTo(map).bindPopup("<strong>Puskesmas Bontang Selatan II</strong><br/>Jl. Hayam Wuruk No. 01, Kel. Berbas Tengah");
+    }).addTo(map).bindPopup("<strong>Puskesmas Bontang Selatan II</strong><br/>Jl. Hayam Wuruk, Kel. Berbas Tengah");
 
-    window.markersLayer = L.layerGroup().addTo(map);
-    window.tempMarker = null;
+    const markersLayer = L.layerGroup().addTo(map);
+    let tempMarker = null;
 
-    map.on('click', (e) => {
-      const lat = e.latlng.lat.toFixed(6);
-      const lng = e.latlng.lng.toFixed(6);
-      document.getElementById('koordinat').value = `${lat}, ${lng}`;
-      if (window.tempMarker) map.removeLayer(window.tempMarker);
-      window.tempMarker = L.marker([lat, lng]).addTo(map).bindPopup("Titik lokasi dipilih").openPopup();
-    });
-  </script>
-
-  <!-- 2. SCRIPT FIREBASE (Gunakan versi Compat agar bisa jalan langsung di file:/// sekalipun) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script>
-
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyA9vLsY0D2ahTZ2sXWQXnqiIOt39uoOZmo",
-  authDomain: "dbd-pkm-bs2.firebaseapp.com",
-  projectId: "dbd-pkm-bs2",
-  storageBucket: "dbd-pkm-bs2.firebasestorage.app",
-  messagingSenderId: "108593161566",
-  appId: "1:108593161566:web:cacb600b556b2e8f079bcf",
-  measurementId: "G-PCZP880K6Y"
-};
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const kasusCol = db.collection("kasus_dbd_bs2");
-    let currentCases = [];
-
-    kasusCol.onSnapshot((snapshot) => {
-      document.getElementById('dbStatus').innerText = "Terhubung (Cloud Aktif)";
-      document.getElementById('dbStatus').style.color = "#16a34a";
-      currentCases = [];
-      snapshot.forEach((doc) => currentCases.push({ id: doc.id, ...doc.data() }));
-      renderData();
-    }, (error) => {
-      document.getElementById('dbStatus').innerText = "Error: " + error.message;
-      document.getElementById('dbStatus').style.color = "#dc2626";
-    });
-
-    function renderData() {
-      window.markersLayer.clearLayers();
-      let totalPenderita = 0, totalAktif = 0;
-      const rekap = {};
-
-      currentCases.forEach((item) => {
-        const isAktif = item.status === "Aktif";
-        const color = isAktif ? "#dc2626" : "#16a34a";
-        const jml = parseInt(item.jumlah) || 1;
-        totalPenderita += jml;
-        if (isAktif) totalAktif++;
-
-        const key = `${item.kelurahan} - ${item.rtJalan}`;
-        rekap[key] = (rekap[key] || 0) + jml;
-
-        if (item.lat && item.lng) {
-          L.circle([item.lat, item.lng], { color, fillColor: color, fillOpacity: 0.15, radius: 100 }).addTo(window.markersLayer);
-          L.circleMarker([item.lat, item.lng], { radius: 8, fillColor: color, color: "#fff", weight: 2, fillOpacity: 1 })
-            .addTo(window.markersLayer)
-            .bindPopup(`<b>Kel. ${item.kelurahan}</b><br/>${item.rtJalan}<br/>Tgl: ${item.tanggal} | ${jml} org<br/>Status: <b>${item.status}</b><br/><br/>
-              <button onclick="ubahStatus('${item.id}','${item.status}')" style="background:#2563eb;color:#fff;padding:4px 8px;">Ubah Status</button>
-              <button onclick="hapusKasus('${item.id}')" style="background:#dc2626;color:#fff;padding:4px 8px;">Hapus</button>`);
-        }
-      });
-
-      document.getElementById('totalTitik').innerText = currentCases.length;
-      document.getElementById('totalKasus').innerText = totalPenderita;
-      document.getElementById('kasusAktif').innerText = totalAktif;
-
-      const list = document.getElementById('rekapRtList');
-      list.innerHTML = Object.keys(rekap).length ? "" : "<li>Belum ada data tercatat.</li>";
-      for (const [k, v] of Object.entries(rekap)) {
-        list.innerHTML += `<li>${k}: <b>${v} kasus</b></li>`;
-      }
+    function setPinSementara(lat, lng, label) {
+      document.getElementById('koordinat').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      if (tempMarker) map.removeLayer(tempMarker);
+      tempMarker = L.marker([lat, lng]).addTo(map).bindPopup(label).openPopup();
     }
 
-    document.getElementById('caseForm').addEventListener('submit', async (e) => {
-e.preventDefault();
-const [lat, lng] = document.getElementById('koordinat').value.split(',').map(Number);
-const btn = document.getElementById('btnSubmit');
-btn.disabled = true; btn.innerText = "Menyimpan...";
-try {
-await kasusCol.add({
-kelurahan: document.getElementById('kelurahan').value,
-rtJalan: document.getElementById('rtJalan').value,
-tanggal: document.getElementById('tanggal').value,
-jumlah: parseInt(document.getElementById('jumlah').value),
-status: document.getElementById('status').value,
-lat, lng,
-createdAt: firebase.firestore.FieldValue.serverTimestamp()
-});
-document.getElementById('caseForm').reset();
-document.getElementById('tanggal').valueAsDate = new Date();
-if (window.tempMarker) map.removeLayer(window.tempMarker);
-} catch (err) {
-alert("Gagal menyimpan: " + err.message);
-}
-btn.disabled = false; btn.innerText = "Simpan Titik Kasus";
-});
-window.ubahStatus = (id, st) => kasusCol.doc(id).update({ status: st === "Aktif" ? "Ditangani" : "Aktif" });
-window.hapusKasus = (id) => { if (confirm("Hapus data ini?")) kasusCol.doc(id).delete(); };
-document.getElementById('btnDemo').onclick = async () => {
-await kasusCol.add({ kelurahan: "Berbas Tengah", rtJalan: "RT 18 / Jl. Hayam Wuruk", tanggal: "2026-11-15", jumlah: 2, status: "Aktif", lat: 0.1125, lng: 117.4875 });
-};
-document.getElementById('btnExport').onclick = () => {
-if (!currentCases.length) return alert("Belum ada data.");
-let csv = "Kelurahan,RT/Jalan,Tanggal,Jumlah,Status,Lat,Lng\n";
-currentCases.forEach(c => csv += "${c.kelurahan}","${c.rtJalan}","${c.tanggal}",${c.jumlah},"${c.status}",${c.lat},${c.lng}\n);
-const a = document.createElement("a");
-a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-a.download = "Sebaran_DBD_BS2.csv";
-a.click();
-};
+    map.on('click', (e) => {
+      setPinSementara(e.latlng.lat, e.latlng.lng, "Titik lokasi dipilih");
+    });
+
+    document.getElementById('koordinat').addEventListener('change', function() {
+      const parts = this.value.split(',').map(s => parseFloat(s.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        setPinSementara(parts[0], parts[1], "Lokasi koordinat manual");
+        map.setView([parts[0], parts[1]], 17);
+      }
+    });
+
+    document.getElementById('btnGps').addEventListener('click', () => {
+      if (!navigator.geolocation) return alert("Browser tidak mendukung GPS.");
+      const btn = document.getElementById('btnGps');
+      btn.innerText = "Mencari sinyal GPS...";
+      navigator.geolocation.getCurrentPosition((pos) => {
+        setPinSementara(pos.coords.latitude, pos.coords.longitude, "Lokasi GPS Anda");
+        map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+        btn.innerText = "📍 Ambil Lokasi GPS Saya Saat Ini";
+      }, (err) => {
+        alert("Gagal GPS: " + err.message);
+        btn.innerText = "📍 Ambil Lokasi GPS Saya Saat Ini";
+      }, { enableHighAccuracy: true });
+    });
+
+    // 2. KONEKSI LANGSUNG KE FIRESTORE REST API (TANPA LIBRARY BERAT)
+    const PROJECT_ID = "dbd-pkm-bs2";
+    const COLLECTION = "kasus_dbd_bs2";
+    const BASE_URL = "https:" + `//://googleapis.com{PROJECT_ID}/databases/(default)/documents/${COLLECTION}`;
+    let currentCases = [];
+
+    function toFirestoreFields(data) {
+      return {
+        fields: {
+          kelurahan: { stringValue: String(data.kelurahan) },
+          rtJalan: { stringValue: String(data.rtJalan) },
+          tanggal: { stringValue: String(data.tanggal) },
+          jumlah: { integerValue: String(data.jumlah) },
+          status: { stringValue: String(data.status) },
+          lat: { doubleValue: Number(data.lat) },
+          lng: { doubleValue: Number(data.lng) }
+        }
+      };
+    }
+
+    function fromFirestoreDoc(doc) {
+      const f = doc.fields || {};
+      const id = doc.name.split('/').pop();
+      return {
+        id: id,
+        kelurahan: f.kelurahan ? f.kelurahan.stringValue : "",
+        rtJalan: f.rtJalan ? f.rtJalan.stringValue : "",
+        tanggal: f.tanggal ? f.tanggal.stringValue : "",
+        jumlah: f.jumlah ? parseInt(f.jumlah.integerValue) : 1,
+        status: f.status ? f.status.stringValue : "Aktif",
+        lat: f.lat ? parseFloat(f.lat.doubleValue) : 0,
+        lng: f.lng ? parseFloat(f.lng.doubleValue) : 0
+      };
+    }
+
+    async function loadData() {
+      try {
+        const res = await fetch(BASE_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const json = await res.json();
+        document.getElementById('dbStatus').innerText = "Terhubung (Cloud Aktif)";
+        document.getElementById('dbStatus').style.color = "#16a34a";
+        currentCases = (json.documents || []).map(fromFirestoreDoc);
