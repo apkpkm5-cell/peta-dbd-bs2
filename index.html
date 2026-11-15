@@ -224,3 +224,11 @@
       renderMapAndStats();
     }
 
+link.setAttribute("download", "Laporan_DBD_Berbas_Tengah.csv");
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+}
+// Jalankan Aplikasi
+muatLeaflet(0);
+loadData();
