@@ -221,3 +221,137 @@
 
       // Filter data sesuai RT yang dipilih
       const filteredCases = selectedFilter === "SEMUA"
+? currentCases
+: currentCases.filter(item => item.rt === selectedFilter);
+filteredCases.forEach(item => {
+totalKasus += item.jumlah;
+if (item.status === "Aktif") aktifCount++;
+const color = item.status === "Aktif" ? "#dc2626" : "#16a34a";
+const nextStatus = item.status === "Aktif" ? "Ditangani" : "Aktif";
+L.circle([item.lat, item.lng], { color: color, fillColor: color, fillOpacity: 0.2, radius: 100 }).addTo(markersLayer);
+const marker = L.circleMarker([item.lat, item.lng], {
+radius: 8, fillColor: color, color: "#ffffff", weight: 2, fillOpacity: 0.95
+}).addTo(markersLayer);
+marker.bindPopup(<strong>${item.rt} - Kel. Berbas Tengah</strong><br/> Lokasi: ${item.jalan}<br/> Tanggal: ${item.tanggal}<br/> Jumlah: <b>${item.jumlah} orang</b><br/> Status: <span style="color:${color}; font-weight:bold;">${item.status}</span><br/><br/> <button onclick="ubahStatus('${item.id}', '${nextStatus}')" style="background:#2563eb; color:white; padding:4px 8px; font-size:11px; margin-right:4px;">Ubah ke ${nextStatus}</button> <button onclick="hapusKasus('${item.id}')" style="background:#ef4444; color:white; padding:4px 8px; font-size:11px;">Hapus</button>);
+});
+document.getElementById('totalTitik').innerText = filteredCases.length;
+document.getElementById('totalKasus').innerText = totalKasus;
+document.getElementById('kasusAktif').innerText = aktifCount;
+const listEl = document.getElementById('rekapRtList');
+listEl.innerHTML = "";
+const entries = Object.entries(rekapMap).sort((a, b) => b[1] - a[1]);
+if (entries.length === 0) {
+listEl.innerHTML = "Belum ada data tercatat.";
+} else {
+entries.forEach(([rtName, jml]) => {
+const li = document.createElement('li');
+li.innerHTML = <b>${rtName}</b>: ${jml} kasus;
+listEl.appendChild(li);
+});
+}
+}
+// 3. Simpan Data Baru ke Firestore
+document.getElementById('caseForm').addEventListener('submit', async function(e) {
+e.preventDefault();
+if (!selectedLat || !selectedLng) {
+alert("Silakan klik lokasi pada peta terlebih dahulu!");
+return;
+}
+const btn = document.getElementById('btnSubmit');
+btn.disabled = true;
+btn.innerText = "Menyimpan...";
+const payload = {
+fields: {
+kelurahan: { stringValue: "Berbas Tengah" },
+rt: { stringValue: document.getElementById('pilihRt').value },
+jalan: { stringValue: document.getElementById('jalan').value },
+tanggal: { stringValue: document.getElementById('tanggal').value },
+jumlah: { integerValue: Number(document.getElementById('jumlah').value) },
+status: { stringValue: document.getElementById('status').value },
+lat: { doubleValue: selectedLat },
+lng: { doubleValue: selectedLng }
+}
+};
+try {
+const res = await fetch(BASE_URL, {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(payload)
+});
+const json = await res.json();
+if (json.error) throw new Error(json.error.message);
+document.getElementById('caseForm').reset();
+selectedLat = null;
+selectedLng = null;
+if (tempMarker) map.removeLayer(tempMarker);
+await loadData();
+} catch (err) {
+alert("Gagal menyimpan: " + err.message);
+} finally {
+btn.disabled = false;
+btn.innerText = "Simpan Titik Kasus";
+}
+});
+// 4. Ubah Status Kasus
+async function ubahStatus(docId, statusBaru) {
+try {
+await fetch(${BASE_URL}/${docId}?updateMask.fieldPaths=status, {
+method: "PATCH",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ fields: { status: { stringValue: statusBaru } } })
+});
+await loadData();
+} catch (err) {
+alert("Gagal ubah status: " + err.message);
+}
+}
+// 5. Hapus Kasus
+async function hapusKasus(docId) {
+if (!confirm("Yakin ingin menghapus titik kasus ini?")) return;
+try {
+await fetch(${BASE_URL}/${docId}, { method: "DELETE" });
+await loadData();
+} catch (err) {
+alert("Gagal menghapus: " + err.message);
+}
+}
+// 6. Isi Data Simulasi Berbas Tengah
+async function isiDataSimulasi() {
+const contoh = [
+{ rt: "RT 18", jalan: "Jl. Hayam Wuruk (Simulasi)", tanggal: "2026-11-12", jumlah: 2, status: "Aktif", lat: 0.1125, lng: 117.4855 },
+{ rt: "RT 07", jalan: "Gg. Merpati (Simulasi)", tanggal: "2026-11-08", jumlah: 1, status: "Ditangani", lat: 0.1145, lng: 117.4882 }
+];
+for (const item of contoh) {
+await fetch(BASE_URL, {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+fields: {
+kelurahan: { stringValue: "Berbas Tengah" },
+rt: { stringValue: item.rt },
+jalan: { stringValue: item.jalan },
+tanggal: { stringValue: item.tanggal },
+jumlah: { integerValue: item.jumlah },
+status: { stringValue: item.status },
+lat: { doubleValue: item.lat },
+lng: { doubleValue: item.lng }
+}
+})
+});
+}
+await loadData();
+}
+// 7. Ekspor CSV
+function exportToCSV() {
+let csvContent = "data:text/csv;charset=utf-8,Kelurahan,RT,Jalan,Tanggal,Jumlah Kasus,Status,Latitude,Longitude\n";
+currentCases.forEach(row => {
+csvContent += "Berbas Tengah","${row.rt}","${row.jalan}","${row.tanggal}",${row.jumlah},"${row.status}",${row.lat},${row.lng}\n;
+});
+const link = document.createElement("a");
+link.setAttribute("href", encodeURI(csvContent));
+link.setAttribute("download", "Laporan_DBD_Berbas_Tengah.csv");
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+}
+loadData();
