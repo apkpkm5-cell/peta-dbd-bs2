@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Peta Sebaran DBD - Kel. Berbas Tengah</title>
-  <!-- Perbaikan Link CSS Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com" />
+  <title>Peta Sebaran DBD - Kelurahan Berbas Tengah</title>
+  <link rel="stylesheet" href="https://unpkg.com" crossorigin="" />
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -17,7 +16,7 @@
     .btn-export { background-color: #15803d; color: white; }
     .btn-demo { background-color: #1d4ed8; color: white; }
     .container { display: flex; flex: 1; overflow: hidden; }
-    #sidebar { width: 340px; background: #f9fafb; border-right: 1px solid #e5e7eb; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    #sidebar { width: 350px; background: #f9fafb; border-right: 1px solid #e5e7eb; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
     .info-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 9px 10px; font-size: 0.82rem; color: #7f1d1d; }
     form { display: flex; flex-direction: column; gap: 9px; }
     label { font-size: 0.82rem; font-weight: 600; color: #374151; }
@@ -26,14 +25,14 @@
     .btn-submit { background-color: #dc2626; color: white; padding: 10px; margin-top: 4px; }
     .card-box { background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; font-size: 0.82rem; }
     .card-box p { margin: 4px 0; }
-    .rt-list { margin: 6px 0 0 0; padding-left: 16px; max-height: 110px; overflow-y: auto; }
-    #map { flex: 1; height: 100%; position: relative; min-height: 300px; }
+    .rt-list { margin: 6px 0 0 0; padding-left: 16px; max-height: 130px; overflow-y: auto; }
+    #map { flex: 1; width: 100%; height: 100%; min-height: 350px; position: relative; z-index: 1; background: #e5e7eb; }
     .legend { position: absolute; bottom: 20px; right: 12px; z-index: 1000; background: white; padding: 10px 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); font-size: 0.78rem; line-height: 1.5; }
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
     @media (max-width: 768px) {
       .container { flex-direction: column-reverse; }
-      #sidebar { width: 100%; height: 52%; border-right: none; border-top: 1px solid #e5e7eb; }
-      #map { height: 48%; }
+      #sidebar { width: 100%; height: 55%; border-right: none; border-top: 1px solid #e5e7eb; }
+      #map { height: 45%; min-height: 280px; }
     }
   </style>
 </head>
@@ -41,8 +40,8 @@
 
   <header>
     <div>
-      <h1>Pemetaan Kasus DBD - Puskesmas Bontang Selatan II</h1>
-      <small>Wilayah Kerja: Kelurahan Berbas Tengah</small>
+      <h1>Pemetaan Kasus DBD - Kelurahan Berbas Tengah</h1>
+      <small>Wilayah Kerja Puskesmas Bontang Selatan II</small>
     </div>
     <div class="header-actions">
       <button type="button" class="btn-demo" onclick="isiDataSimulasi()">+ Isi Contoh Simulasi</button>
@@ -53,17 +52,19 @@
   <div class="container">
     <div id="sidebar">
       <div class="info-box">
-        <strong>Petunjuk:</strong> Klik titik lokasi pada peta untuk mengisi koordinat otomatis, lalu isi form dan simpan ke database cloud.
+        <strong>Petunjuk:</strong> Klik titik lokasi pada peta untuk mengisi koordinat otomatis, pilih RT, lalu simpan data.
       </div>
 
       <form id="caseForm">
         <div>
-          <label>Kelurahan</label>
-          <input type="text" id="kelurahan" value="Berbas Tengah" readonly required />
+          <label>Pilih Nomor RT (Kel. Berbas Tengah)</label>
+          <select id="pilihRt" required>
+            <!-- Diisi otomatis RT 01 - RT 62 oleh JavaScript -->
+          </select>
         </div>
         <div>
-          <label>Nomor RT & Jalan / Gang</label>
-          <input type="text" id="rtJalan" placeholder="Contoh: RT 18 / Jl. Hayam Wuruk" required />
+          <label>Nama Jalan / Gang / Patokan</label>
+          <input type="text" id="jalan" placeholder="Contoh: Jl. Hayam Wuruk Gg. 2" required />
         </div>
         <div>
           <label>Tanggal Laporan</label>
@@ -88,7 +89,12 @@
       </form>
 
       <div class="card-box">
-        <strong>Ringkasan Kel. Berbas Tengah:</strong>
+        <strong>Filter & Ringkasan Sebaran RT:</strong>
+        <div style="margin: 6px 0;">
+          <select id="filterRt" onchange="renderMapAndStats()">
+            <option value="SEMUA">-- Tampilkan Semua RT --</option>
+          </select>
+        </div>
         <p>Status Database: <span id="dbStatus" style="color:#d97706; font-weight:bold;">Memulai...</span></p>
         <p>Total Titik Lokasi: <b id="totalTitik">0</b> titik</p>
         <p>Total Penderita: <b id="totalKasus">0</b> orang</p>
@@ -96,7 +102,7 @@
       </div>
 
       <div class="card-box">
-        <strong>Rekap Sebaran per RT/Jalan:</strong>
+        <strong>Rekap Kasus per RT:</strong>
         <ul class="rt-list" id="rekapRtList">
           <li>Belum ada data tercatat.</li>
         </ul>
@@ -113,25 +119,40 @@
     </div>
   </div>
 
-  <!-- Perbaikan Link JS Leaflet -->
-  <script src="https://unpkg.com"></script>
+  <script src="https://unpkg.com" crossorigin=""></script>
   <script>
+    // 0. Isi Pilihan RT 01 sampai RT 62 secara otomatis
+    const pilihRtEl = document.getElementById('pilihRt');
+    const filterRtEl = document.getElementById('filterRt');
+    for (let i = 1; i <= 62; i++) {
+      const rtStr = "RT " + String(i).padStart(2, '0');
+      const opt1 = new Option(rtStr, rtStr);
+      const opt2 = new Option("Filter: " + rtStr, rtStr);
+      pilihRtEl.add(opt1);
+      filterRtEl.add(opt2);
+    }
+
+    // Konfigurasi Firebase Firestore
     const PROJECT_ID = "dbd-pkm-bs2";
     const COLLECTION = "kasus_dbd_bs2";
-    // Perbaikan URL Firestore REST API
     const BASE_URL = `https://googleapis.com{PROJECT_ID}/databases/(default)/documents/${COLLECTION}`;
 
     const statusEl = document.getElementById('dbStatus');
     const pkmCoords = [0.1118, 117.4868];
-    const map = L.map('map').setView(pkmCoords, 15);
 
+    // Inisialisasi Peta Leaflet
+    const map = L.map('map').setView(pkmCoords, 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Paksa ukuran peta menyesuaikan layar agar tidak abu-abu/hilang
+    setTimeout(() => { map.invalidateSize(); }, 400);
+
     L.circleMarker(pkmCoords, {
       radius: 10, fillColor: "#2563eb", color: "#ffffff", weight: 3, fillOpacity: 1
-    }).addTo(map).bindPopup("<strong>Puskesmas Bontang Selatan II</strong><br/>Jl. Hayam Wuruk No. 01, Kel. Berbas Tengah");
+    }).addTo(map).bindPopup("<strong>Puskesmas Bontang Selatan II</strong><br/>Kelurahan Berbas Tengah");
 
     const markersLayer = L.layerGroup().addTo(map);
     let tempMarker = null;
@@ -139,22 +160,20 @@
     let selectedLat = null;
     let selectedLng = null;
 
-    // 0. Klik Peta untuk Ambil Koordinat
+    // Klik Peta untuk Ambil Koordinat
     map.on('click', function(e) {
       selectedLat = Number(e.latlng.lat.toFixed(6));
       selectedLng = Number(e.latlng.lng.toFixed(6));
       document.getElementById('koordinat').value = `${selectedLat}, ${selectedLng}`;
 
-      if (tempMarker) {
-        map.removeLayer(tempMarker);
-      }
+      if (tempMarker) map.removeLayer(tempMarker);
       tempMarker = L.marker([selectedLat, selectedLng]).addTo(map)
-        .bindPopup("Lokasi dipilih untuk input kasus baru").openPopup();
+        .bindPopup("Titik dipilih").openPopup();
     });
 
-    // 1. Ambil Data dari Firestore (READ)
+    // 1. Ambil Data dari Firestore
     async function loadData() {
-      statusEl.innerText = "Menghubungkan ke Cloud...";
+      statusEl.innerText = "Menghubungkan...";
       try {
         const res = await fetch(BASE_URL);
         const json = await res.json();
@@ -163,14 +182,14 @@
         statusEl.innerText = "Terhubung (Cloud Aktif)";
         statusEl.style.color = "#16a34a";
 
-        // Filter khusus Berbas Tengah saja
         currentCases = (json.documents || []).map(doc => {
           const f = doc.fields || {};
           const docId = doc.name.split('/').pop();
           return {
             id: docId,
             kelurahan: f.kelurahan ? f.kelurahan.stringValue : "Berbas Tengah",
-            rtJalan: f.rtJalan ? f.rtJalan.stringValue : "",
+            rt: f.rt ? f.rt.stringValue : (f.rtJalan ? f.rtJalan.stringValue : "RT 01"),
+            jalan: f.jalan ? f.jalan.stringValue : "",
             tanggal: f.tanggal ? f.tanggal.stringValue : "",
             jumlah: f.jumlah ? Number(f.jumlah.integerValue || f.jumlah.doubleValue || 1) : 1,
             status: f.status ? f.status.stringValue : "Aktif",
@@ -186,78 +205,19 @@
       }
     }
 
-    // 2. Render Peta & Statistik
+    // 2. Render Peta & Statistik (Mendukung Filter per RT)
     function renderMapAndStats() {
       markersLayer.clearLayers();
+      const selectedFilter = document.getElementById('filterRt').value;
+
       let totalKasus = 0;
       let aktifCount = 0;
       const rekapMap = {};
 
+      // Hitung rekap semua RT
       currentCases.forEach(item => {
-        totalKasus += item.jumlah;
-        if (item.status === "Aktif") aktifCount++;
+        rekapMap[item.rt] = (rekapMap[item.rt] || 0) + item.jumlah;
+      });
 
-        const keyWil = item.rtJalan;
-        rekapMap[keyWil] = (rekapMap[keyWil] || 0) + item.jumlah;
-
-        const color = item.status === "Aktif" ? "#dc2626" : "#16a34a";
-        const nextStatus = item.status === "Aktif" ? "Ditangani" : "Aktif";
-
-        L.circle([item.lat, item.lng], { color: color, fillColor: color, fillOpacity: 0.2, radius: 100 }).addTo(markersLayer);
-
-        const marker = L.circleMarker([item.lat, item.lng], {
-          radius: 8, fillColor: color, color: "#ffffff", weight: 2, fillOpacity: 0.95
-        }).addTo(markersLayer);
-
-        marker.bindPopup(`
-          <strong>Kel. ${item.kelurahan}</strong><br/>
-          Lokasi: ${item.rtJalan}<br/>
-          Tanggal: ${item.tanggal}<br/>
-          Jumlah: <b>${item.jumlah} orang</b><br/>
-          Status: <span style="color:${color}; font-weight:bold;">${item.status}</span><br/><br/>
-          <button onclick="ubahStatus('${item.id}', '${nextStatus}')" style="background:#2563eb; color:white; padding:4px 8px; font-size:11px; margin-right:4px;">Ubah ke ${nextStatus}</button>
-await fetch(${BASE_URL}/${docId}, { method: "DELETE" });
-await loadData();
-} catch (err) {
-alert("Gagal menghapus data: " + err.message);
-}
-}
-// 6. Isi Data Simulasi (Khusus Berbas Tengah)
-async function isiDataSimulasi() {
-const contoh = [
-{ kelurahan: "Berbas Tengah", rtJalan: "RT 18 / Jl. Hayam Wuruk (Simulasi)", tanggal: "2026-11-12", jumlah: 2, status: "Aktif", lat: 0.1125, lng: 117.4855 },
-{ kelurahan: "Berbas Tengah", rtJalan: "RT 07 (Simulasi)", tanggal: "2026-11-08", jumlah: 1, status: "Ditangani", lat: 0.1145, lng: 117.4882 }
-];
-for (const item of contoh) {
-await fetch(BASE_URL, {
-method: "POST",
-headers: { "Content-Type": "application/json" },
-body: JSON.stringify({
-fields: {
-kelurahan: { stringValue: item.kelurahan },
-rtJalan: { stringValue: item.rtJalan },
-tanggal: { stringValue: item.tanggal },
-jumlah: { integerValue: item.jumlah },
-status: { stringValue: item.status },
-lat: { doubleValue: item.lat },
-lng: { doubleValue: item.lng }
-}
-})
-});
-}
-await loadData();
-}
-// 7. Ekspor CSV
-function exportToCSV() {
-let csvContent = "data:text/csv;charset=utf-8,Kelurahan,RT/Jalan,Tanggal,Jumlah Kasus,Status,Latitude,Longitude\n";
-currentCases.forEach(row => {
-csvContent += "${row.kelurahan}","${row.rtJalan}","${row.tanggal}",${row.jumlah},"${row.status}",${row.lat},${row.lng}\n;
-});
-const link = document.createElement("a");
-link.setAttribute("href", encodeURI(csvContent));
-link.setAttribute("download", "Laporan_DBD_Berbas_Tengah.csv");
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
-}
-loadData();
+      // Filter data sesuai RT yang dipilih
+      const filteredCases = selectedFilter === "SEMUA"
