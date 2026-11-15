@@ -155,7 +155,9 @@
   appId: "1:108593161566:web:cacb600b556b2e8f079bcf",
   measurementId: "G-PCZP880K6Y"
 };    
-   firebase.initializeApp(firebaseConfig);
+    const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+  // firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const kasusCol = db.collection("kasus_dbd_bs2");
     let currentCases = [];
