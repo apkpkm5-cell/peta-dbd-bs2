@@ -255,12 +255,10 @@ let kasusCol = null;
     // 2. Dengarkan Perubahan Data Real-Time dari Firebase Firestore (READ)
     // Periksa login sebelum mengakses Firestore
 onAuthStateChanged(auth, async (user) => {
-
   if (!user) {
-  document.getElementById("dbStatus").innerText =
-    "AUTH KOSONG - PENGGUNA TIDAK TERDETEKSI";
-  return;
-    }
+    window.location.replace("login.html");
+    return;
+  }
 
   try {
 
