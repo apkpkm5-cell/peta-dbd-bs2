@@ -105,7 +105,9 @@ from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
-  signOut
+  signOut,
+  setPersistence,
+  browserLocalPersistence
 }
 from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
@@ -143,7 +145,7 @@ document.getElementById("loginForm")
   pesan.textContent = "Sedang memeriksa akun...";
 
   try {
-
+await setPersistence(auth, browserLocalPersistence);
     const result = await signInWithEmailAndPassword(
       auth,
       email,
