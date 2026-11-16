@@ -147,6 +147,7 @@ document.getElementById("loginForm")
 
   try {
 await setPersistence(auth, browserLocalPersistence);
+    alert("PERSISTENCE BERHASIL");
     const result = await signInWithEmailAndPassword(
       auth,
       email,
