@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peta Sebaran DBD - Puskesmas Bontang Selatan II</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif}
+body{margin:0;height:100vh;display:flex;flex-direction:column}
+header{background:#b91c1c;color:white;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+header h1{margin:0;font-size:1.1rem}header small{font-size:.78rem}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}
+button{padding:8px 12px;border:0;border-radius:5px;cursor:pointer;font-weight:bold}
+.btn-demo{background:#1d4ed8;color:white}.btn-export{background:#15803d;color:white}.btn-submit{background:#dc2626;color:white;padding:10px}
+.container{display:flex;flex:1;min-height:0;overflow:hidden}
+#sidebar{width:340px;flex-shrink:0;background:#f9fafb;border-right:1px solid #ddd;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.info-box{background:#fef2f2;border-left:4px solid #dc2626;padding:10px;font-size:.82rem;color:#7f1d1d}
+form{display:flex;flex-direction:column;gap:9px}
+label{display:block;font-size:.82rem;font-weight:bold;margin-bottom:4px}
+input,select{width:100%;padding:9px;border:1px solid #d1d5db;border-radius:5px}
+.card-box{background:white;border:1px solid #ddd;border-radius:6px;padding:10px;font-size:.82rem}
+.card-box p{margin:6px 0}.rt-list{padding-left:18px;max-height:120px;overflow-y:auto}
+#map{flex:1;min-width:0;min-height:300px;position:relative}
+.legend{position:absolute;bottom:20px;right:12px;z-index:1000;background:white;padding:10px;border-radius:6px;box-shadow:0 2px 6px #999;font-size:.78rem;line-height:1.7}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+#userInfo{font-size:.78rem;opacity:.95}
+@media(max-width:768px){
+ body{height:100dvh}.container{flex-direction:column-reverse}
+ #sidebar{width:100%;height:52%;flex:none;border:0}
+ #map{width:100%;height:48%;min-height:220px;flex:none}
+ header h1{font-size:.95rem}
+}
+</style>
+</head>
+<body>
+<header>
+<div>
+<h1>Pemetaan Kasus DBD - Puskesmas Bontang Selatan II</h1>
+<small>Wilayah Kerja: Kelurahan Berbas Tengah</small>
+<div id="userInfo">Memeriksa akun...</div>
+</div>
+<div class="header-actions">
+<button class="btn-demo" onclick="isiDataSimulasi()">+ Contoh Simulasi</button>
+<button class="btn-export" onclick="exportToCSV()">Unduh CSV</button>
+</div>
+</header>
+<div class="container">
+<div id="sidebar">
+<div class="info-box"><b>Petunjuk:</b> Klik lokasi pada peta untuk mengisi koordinat. Kemudian isi formulir dan simpan ke database Cloud.</div>
+<form id="caseForm">
+<input type="hidden" id="kelurahan" value="Berbas Tengah">
+<div class="info-box"><b>Kelurahan:</b> Berbas Tengah</div>
+<div><label>Nomor RT &amp; Jalan / Gang</label><input type="text" id="rtJalan" placeholder="Contoh: RT 02 / Gg. Melati" required></div>
+<div><label>Nomor Rumah</label><input type="text" id="nomorRumah" placeholder="Contoh: 12 atau 12A" required></div>
+<div><label>Tanggal Laporan</label><input type="date" id="tanggal" required></div>
+<div><label>Jumlah Kasus (Orang)</label><input type="number" id="jumlah" min="1" value="1" required></div>
+<div><label>Status Penanganan</label><select id="status"><option value="Aktif">Kasus Aktif</option><option value="Ditangani">Sudah Ditangani / Selesai</option></select></div>
+<div><label>Koordinat</label><input type="text" id="koordinat" placeholder="Klik lokasi pada peta..." readonly required></div>
+<button type="submit" class="btn-submit" id="btnSubmit">Simpan Titik Kasus</button>
+</form>
+<div class="card-box">
+<b>Ringkasan Wilayah Kerja</b>
+<p>Status Database: <span id="dbStatus" style="color:#d97706;font-weight:bold">Memeriksa...</span></p>
+<p>Total Titik Lokasi: <b id="totalTitik">0</b> titik</p>
+<p>Total Penderita: <b id="totalKasus">0</b> orang</p>
+<p>Kasus Aktif: <b id="kasusAktif" style="color:#dc2626">0</b> lokasi</p>
+</div>
+<div class="card-box"><b>Rekap Sebaran per RT</b><ul class="rt-list" id="rekapRtList"><li>Belum ada data tercatat.</li></ul></div>
+</div>
+<div id="map">
+<div class="legend"><b>Keterangan Peta</b><br><span class="dot" style="background:#dc2626"></span>Kasus DBD Aktif<br><span class="dot" style="background:#16a34a"></span>Sudah Ditangani<br>Lingkaran = Radius 100 meter</div>
+</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import {getFirestore,collection,addDoc,onSnapshot,doc,getDoc,updateDoc,deleteDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+const firebaseConfig={
+apiKey:"AIzaSyA9vLsY0D2ahTZ2sXWQXnqiIOt39uoOZmo",
+authDomain:"dbd-pkm-bs2.firebaseapp.com",
+projectId:"dbd-pkm-bs2",
+storageBucket:"dbd-pkm-bs2.firebasestorage.app",
+messagingSenderId:"108593161566",
+appId:"1:108593161566:web:cacb600b556b2e8f079bcf",
+measurementId:"G-PCZP880K6Y"
+};
+const app=getApps().length?getApps()[0]:initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const kasusCol=collection(db,"kasus_dbd_bs2");
+let currentCases=[],tempMarker=null,markersLayer,unsubscribeCases=null;
+
+function statusDatabase(pesan,warna){
+const el=document.getElementById("dbStatus");el.textContent=pesan;el.style.color=warna;
+}
+if(typeof L==="undefined"){statusDatabase("Peta gagal dimuat","#dc2626");throw new Error("Leaflet tidak berhasil dimuat.");}
+const map=L.map("map").setView([0.105,117.48],15);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"&copy; OpenStreetMap contributors",maxZoom:19}).addTo(map);
+markersLayer=L.layerGroup().addTo(map);
+setTimeout(()=>map.invalidateSize(),500);
+window.addEventListener("resize",()=>map.invalidateSize());
+
+function escapeHTML(value){
+return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
+}
+function renderMapAndStats(){
+markersLayer.clearLayers();
+let totalKasus=0,aktifCount=0,totalTitik=0;
+const rekapMap={};
+currentCases.filter(item=>item.kelurahan==="Berbas Tengah").forEach(item=>{
+const lat=Number(item.lat),lng=Number(item.lng),jumlah=Number(item.jumlah)||0;
+if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+totalTitik++;totalKasus+=jumlah;if(item.status==="Aktif")aktifCount++;
+const wilayah=`${item.rtJalan||"-"} - No. Rumah ${item.nomorRumah||"-"}`;
+rekapMap[wilayah]=(rekapMap[wilayah]||0)+jumlah;
+const color=item.status==="Aktif"?"#dc2626":"#16a34a";
+L.circle([lat,lng],{color,fillColor:color,fillOpacity:.2,radius:100}).addTo(markersLayer);
+const marker=L.circleMarker([lat,lng],{radius:8,fillColor:color,color:"#fff",weight:2,fillOpacity:.95}).addTo(markersLayer);
+const nextStatus=item.status==="Aktif"?"Ditangani":"Aktif",safeId=escapeHTML(item.id);
+marker.bindPopup(`<b>Kelurahan:</b> ${escapeHTML(item.kelurahan)}<br><b>RT/Jalan:</b> ${escapeHTML(item.rtJalan)}<br><b>Nomor Rumah:</b> ${escapeHTML(item.nomorRumah)}<br><b>Tanggal:</b> ${escapeHTML(item.tanggal)}<br><b>Jumlah:</b> ${jumlah} orang<br><b>Status:</b> ${escapeHTML(item.status)}<br><br><button onclick="ubahStatus('${safeId}','${nextStatus}')">Ubah ke ${nextStatus}</button> <button onclick="hapusKasus('${safeId}')">Hapus</button>`);
+});
+document.getElementById("totalTitik").textContent=totalTitik;
+document.getElementById("totalKasus").textContent=totalKasus;
+document.getElementById("kasusAktif").textContent=aktifCount;
+const list=document.getElementById("rekapRtList");list.innerHTML="";
+const entries=Object.entries(rekapMap);
+if(!entries.length)list.innerHTML="<li>Belum ada data tercatat.</li>";
+else entries.forEach(([wilayah,jumlah])=>{const li=document.createElement("li");li.textContent=`${wilayah}: ${jumlah} kasus`;list.appendChild(li);});
+}
+function mulaiKoneksiFirebase(){
+if(unsubscribeCases)return;
+statusDatabase("Menghubungkan Cloud...","#d97706");
+unsubscribeCases=onSnapshot(kasusCol,snapshot=>{
+currentCases=[];snapshot.forEach(docSnap=>currentCases.push({id:docSnap.id,...docSnap.data()}));
+statusDatabase("Terhubung (Cloud Aktif)","#16a34a");renderMapAndStats();
+console.log("Firestore berhasil membaca:",currentCases.length,"data");
+},error=>{
+console.error("Firestore gagal:",error);statusDatabase("Gagal: "+error.code,"#dc2626");unsubscribeCases=null;
+});
+}
+statusDatabase("Memeriksa login...","#d97706");
+onAuthStateChanged(auth,async user=>{
+if(!user){window.location.replace("login.html");return;}
+try{
+console.log("UID:",user.uid);
+const userSnap=await getDoc(doc(db,"users",user.uid));
+if(!userSnap.exists()){alert("Dokumen pengguna tidak ditemukan.");await signOut(auth);window.location.replace("login.html");return;}
+const data=userSnap.data();
+if(data.role!=="admin"&&data.role!=="petugas"){alert("Hak akses tidak dikenali.");await signOut(auth);window.location.replace("login.html");return;}
+window.pkmUser={uid:user.uid,email:user.email,nama:data.nama||"",role:data.role};
+document.getElementById("userInfo").textContent=`${data.nama||user.email} | ${data.role}`;
+console.log("Login berhasil:",data.role);mulaiKoneksiFirebase();
+}catch(error){
+console.error("Kesalahan autentikasi:",error);statusDatabase("Gagal: "+(error.code||error.message),"#dc2626");alert("Gagal memeriksa akun: "+error.message);
+}
+});
+map.on("click",e=>{
+const lat=e.latlng.lat,lng=e.latlng.lng;
+document.getElementById("koordinat").value=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+if(tempMarker)map.removeLayer(tempMarker);
+tempMarker=L.marker([lat,lng]).addTo(map).bindPopup("Lokasi kasus baru").openPopup();
+});
+document.getElementById("caseForm").addEventListener("submit",async function(e){
+e.preventDefault();
+if(!window.pkmUser){alert("Login belum terverifikasi.");return;}
+const coords=document.getElementById("koordinat").value.split(",");
+if(coords.length!==2){alert("Silakan klik lokasi pada peta.");return;}
+const lat=Number(coords[0].trim()),lng=Number(coords[1].trim());
+if(!Number.isFinite(lat)||!Number.isFinite(lng)){alert("Koordinat tidak valid.");return;}
+const btn=document.getElementById("btnSubmit");btn.disabled=true;btn.textContent="Menyimpan...";
+try{
+await addDoc(kasusCol,{
+kelurahan:document.getElementById("kelurahan").value,
+rtJalan:document.getElementById("rtJalan").value,
+nomorRumah:document.getElementById("nomorRumah").value,
+tanggal:document.getElementById("tanggal").value,
+jumlah:Number(document.getElementById("jumlah").value),
+status:document.getElementById("status").value,lat,lng,createdAt:serverTimestamp()
+});
+alert("Data berhasil disimpan ke Cloud!");
+if(tempMarker){map.removeLayer(tempMarker);tempMarker=null;}this.reset();
+}catch(error){console.error(error);alert("Gagal menyimpan: "+error.message);}
+finally{btn.disabled=false;btn.textContent="Simpan Titik Kasus";}
+});
+window.ubahStatus=async function(id,statusBaru){
+try{await updateDoc(doc(db,"kasus_dbd_bs2",id),{status:statusBaru});alert("Status berhasil diperbarui.");}
+catch(error){alert("Gagal mengubah status: "+error.message);}
+};
+window.hapusKasus=async function(id){
+if(!confirm("Yakin ingin menghapus titik kasus ini?"))return;
+try{await deleteDoc(doc(db,"kasus_dbd_bs2",id));alert("Data berhasil dihapus.");}
+catch(error){alert("Gagal menghapus: "+error.message);}
+};
+window.isiDataSimulasi=async function(){
+if(!window.pkmUser){alert("Silakan login terlebih dahulu.");return;}
+if(!confirm("Tambahkan satu titik contoh SIMULASI?"))return;
+try{
+await addDoc(kasusCol,{kelurahan:"Berbas Tengah",rtJalan:"RT 02 (SIMULASI)",nomorRumah:"12 (SIMULASI)",tanggal:new Date().toISOString().slice(0,10),jumlah:1,status:"Aktif",lat:0.1125,lng:117.4855,createdAt:serverTimestamp()});
+alert("Data simulasi berhasil ditambahkan.");
+}catch(error){alert("Gagal menambahkan simulasi: "+error.message);}
+};
+window.exportToCSV=function(){
+const rows=currentCases.filter(row=>row.kelurahan==="Berbas Tengah");
+let csv="Kelurahan,RT/Jalan,Nomor Rumah,Tanggal,Jumlah,Status,Latitude,Longitude\n";
+rows.forEach(row=>{
+const values=[row.kelurahan,row.rtJalan,row.nomorRumah||"",row.tanggal,row.jumlah,row.status,row.lat,row.lng];
+csv+=values.map(value=>`"${String(value??"").replace(/"/g,'""')}"`).join(",")+"\n";
+});
+const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+const url=URL.createObjectURL(blob),link=document.createElement("a");
+link.href=url;link.download="Laporan_DBD_Puskesmas_BS2.csv";
+document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+};
+</script>
+</body>
+</html>
