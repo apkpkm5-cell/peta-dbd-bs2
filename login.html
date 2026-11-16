@@ -166,7 +166,7 @@ await setPersistence(auth, browserLocalPersistence);
     const data = userSnap.data();
 
     if (data.role !== "admin" && data.role !== "petugas") {
-      await auth.signOut();
+      await signOut(auth);
       pesan.textContent = "Hak akses tidak dikenali.";
       return;
     }
