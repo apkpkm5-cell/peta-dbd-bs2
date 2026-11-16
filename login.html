@@ -173,7 +173,7 @@ await setPersistence(auth, browserLocalPersistence);
 
     localStorage.setItem("pkm_role", data.role);
     localStorage.setItem("pkm_nama", data.nama || "");
-    
+    pesan.textContent = "Login berhasil, membuka peta...";
     window.location.href = "index.html";
 
   } catch (error) {
