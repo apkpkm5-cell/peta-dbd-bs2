@@ -197,10 +197,18 @@
 
   <!-- Firebase SDK (Modular) -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 
-    // Konfigurasi Firebase Proyek dbd-pkm-bs2
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";    // Konfigurasi Firebase Proyek dbd-pkm-bs2
     const firebaseConfig = {
       apiKey: "AIzaSyA9vLsY0D2ahTZ2sXWQXtqiiOt39uoOZmo",
       authDomain: "dbd-pkm-bs2.firebaseapp.com",
