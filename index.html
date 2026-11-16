@@ -201,16 +201,14 @@
 
 import {
   getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
   doc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";    // Konfigurasi Firebase Proyek dbd-pkm-bs2
-    const firebaseConfig = {
-      apiKey: "AIzaSyA9vLsY0D2ahTZ2sXWQXnqiIOt39uoOZmo",
+  getDoc
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+// Gunakan konfigurasi yang SAMA dengan login.html
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {,
+  apiKey: "AIzaSyA9vLsY0D2ahTZ2sXWQXnqiIOt39uoOZmo",
   authDomain: "dbd-pkm-bs2.firebaseapp.com",
   projectId: "dbd-pkm-bs2",
   storageBucket: "dbd-pkm-bs2.firebasestorage.app",
@@ -218,7 +216,6 @@ import {
   appId: "1:108593161566:web:cacb600b556b2e8f079bcf",
   measurementId: "G-PCZP880K6Y"
 };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const kasusCol = collection(db, "kasus_dbd_bs2");
