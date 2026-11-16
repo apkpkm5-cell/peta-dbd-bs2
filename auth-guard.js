@@ -71,8 +71,8 @@ onAuthStateChanged(auth, async (user) => {
     );
 
   } catch (error) {
-    console.error(error);
-    alert("Gagal memeriksa hak akses.");
-  }
+  console.error("KESALAHAN AUTH:", error);
+  alert("Gagal memeriksa hak akses: " + error.message);
+}
 
 });
