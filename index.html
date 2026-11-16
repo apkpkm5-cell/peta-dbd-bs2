@@ -238,6 +238,7 @@
     let tempMarker = null;
     let currentCases = [];
 
+    document.addEventListener("pkm-auth-ready", () => {
     // 2. Dengarkan Perubahan Data Real-Time dari Firebase Firestore (READ)
     onSnapshot(kasusCol, (snapshot) => {
       document.getElementById('dbStatus').innerText = "Terhubung (Cloud Aktif)";
@@ -254,7 +255,6 @@
       document.getElementById('dbStatus').style.color = "#dc2626";
       console.error(error);
     });
-
     // 3. Render Titik Peta & Rekap per RT
     function renderMapAndStats() {
       markersLayer.clearLayers();
@@ -395,7 +395,7 @@ document.body.appendChild(link);
 link.click();
 document.body.removeChild(link);
 };
-
+});
 
 
 
