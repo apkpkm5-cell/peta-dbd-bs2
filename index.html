@@ -255,21 +255,75 @@ let kasusCol = null;
     let currentCases = [];
 
     // 2. Dengarkan Perubahan Data Real-Time dari Firebase Firestore (READ)
+    // Periksa login sebelum mengakses Firestore
+onAuthStateChanged(auth, async (user) => {
+
+  if (!user) {
+    document.getElementById("dbStatus").innerText =
+      "Belum login";
+
+    window.location.replace("login.html");
+    return;
+  }
+
+  try {
+
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      throw new Error("Dokumen akun tidak ditemukan di users.");
+    }
+
+    const userData = userSnap.data();
+
+    if (
+      userData.role !== "admin" &&
+      userData.role !== "petugas"
+    ) {
+      throw new Error("Role akun tidak valid.");
+    }
+
+    kasusCol = collection(db, "kasus_dbd_bs2");
+
     onSnapshot(kasusCol, (snapshot) => {
-      document.getElementById('dbStatus').innerText = "Terhubung (Cloud Aktif)";
-      document.getElementById('dbStatus').style.color = "#16a34a";
 
       currentCases = [];
+
       snapshot.forEach((docSnap) => {
-        currentCases.push({ id: docSnap.id, ...docSnap.data() });
+        currentCases.push({
+          id: docSnap.id,
+          ...docSnap.data()
+        });
       });
 
+      document.getElementById("dbStatus").innerText =
+        "Terhubung (Cloud Aktif)";
+
+      document.getElementById("dbStatus").style.color =
+        "#16a34a";
+
       renderMapAndStats();
+
     }, (error) => {
-      document.getElementById('dbStatus').innerText = "Gagal terhubung ke database";
-      document.getElementById('dbStatus').style.color = "#dc2626";
-      console.error(error);
+
+      document.getElementById("dbStatus").innerText =
+        "Gagal: " + error.code;
+
+      console.error("Firestore:", error);
+
     });
+
+  } catch (error) {
+
+    document.getElementById("dbStatus").innerText =
+      "Gagal: " + error.message;
+
+    console.error(error);
+
+  }
+
+});
 
     // 3. Render Titik Peta & Rekap per RT
     function renderMapAndStats() {
