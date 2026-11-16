@@ -1,25 +1,23 @@
 import {
   initializeApp,
   getApps
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+} from "https://gstatic.com";
 
 import {
   getAuth,
   onAuthStateChanged,
   signOut
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+} from "https://gstatic.com";
 
 import {
   getFirestore,
   doc,
   getDoc
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+} from "https://gstatic.com";
 
-// Gunakan konfigurasi yang SAMA dengan login.html
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyA9vLsY0D2ahTZ2sXWQXnqiIOt39uoOZmo",
-  authDomain: "dbd-pkm-bs2.firebaseapp.com",
+  authDomain: "://firebaseapp.com",
   projectId: "dbd-pkm-bs2",
   storageBucket: "dbd-pkm-bs2.firebasestorage.app",
   messagingSenderId: "108593161566",
@@ -35,7 +33,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 onAuthStateChanged(auth, async (user) => {
-
   if (!user) {
     window.location.replace("login.html");
     return;
@@ -66,13 +63,10 @@ onAuthStateChanged(auth, async (user) => {
       role: data.role
     };
 
-    document.dispatchEvent(
-      new Event("pkm-auth-ready")
-    );
+    document.dispatchEvent(new Event("pkm-auth-ready"));
 
   } catch (error) {
-  console.error("KESALAHAN AUTH:", error);
-  alert("Gagal memeriksa hak akses: " + error.message);
-}
-
+    console.error("KESALAHAN AUTH:", error);
+    alert("Gagal memeriksa hak akses: " + error.message);
+  }
 });
