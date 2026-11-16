@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login PKM - DBD</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #eef4f8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  background: white;
+  padding: 30px;
+  width: 90%;
+  max-width: 400px;
+  border-radius: 16px;
+  box-shadow: 0 5px 25px #0002;
+}
+
+h2 {
+  text-align: center;
+  color: #1565c0;
+}
+
+p {
+  text-align: center;
+  color: #666;
+}
+
+input {
+  width: 100%;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  background: #1565c0;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+#pesan {
+  color: #d32f2f;
+  text-align: center;
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>PKM DBD</h2>
+<p>Sistem Informasi Pemantauan Kasus DBD</p>
+
+<form id="loginForm">
+
+<input
+type="email"
+id="email"
+placeholder="Email Administrator / Petugas"
+required>
+
+<input
+type="password"
+id="password"
+placeholder="Password"
+required>
+
+<button type="submit">LOGIN</button>
+
+</form>
+
+<div id="pesan"></div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+
+import {
+  getAuth,
+  signInWithEmailAndPassword
+}
+from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  getDoc
+}
+from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+// GANTI DENGAN KONFIGURASI FIREBASE MILIKMU
+const firebaseConfig = {
+  apiKey: "ISI_API_KEY",
+  authDomain: "dbd-pkm-bs2.firebaseapp.com",
+  projectId: "dbd-pkm-bs2",
+  storageBucket: "ISI_STORAGE_BUCKET",
+  messagingSenderId: "ISI_SENDER_ID",
+  appId: "ISI_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+document.getElementById("loginForm")
+.addEventListener("submit", async (e) => {
+
+  e.preventDefault();
+
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const pesan = document.getElementById("pesan");
+
+  pesan.textContent = "Sedang memeriksa akun...";
+
+  try {
+
+    const result = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    const uid = result.user.uid;
+
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      await auth.signOut();
+      pesan.textContent = "Data hak akses pengguna belum tersedia.";
+      return;
+    }
+
+    const data = userSnap.data();
+
+    if (data.role !== "admin" && data.role !== "petugas") {
+      await auth.signOut();
+      pesan.textContent = "Hak akses tidak dikenali.";
+      return;
+    }
+
+    localStorage.setItem("pkm_role", data.role);
+    localStorage.setItem("pkm_nama", data.nama || "");
+    
+    window.location.href = "index.html";
+
+  } catch (error) {
+
+    pesan.textContent = "Login gagal. Periksa email dan password.";
+
+    console.error(error);
+
+  }
+
+});
+
+</script>
+
+</body>
+</html>
