@@ -258,10 +258,15 @@ import {
         const user = auth.currentUser;
 
         if (!user) {
-          window.location.replace("login.html");
-          return;
-        }
-
+  document.body.innerHTML = `
+    <h2>TES KONEKSI FIREBASE</h2>
+    <p style="color:red">
+      AUTH KOSONG: Firebase belum membaca sesi login.
+    </p>
+    <p>Halaman ditahan agar tidak kembali ke login.</p>
+  `;
+  return;
+}
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
 
