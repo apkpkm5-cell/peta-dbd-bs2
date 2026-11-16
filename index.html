@@ -258,7 +258,7 @@ import {
         const user = auth.currentUser;
 
         if (!user) {
-  alert("PEMERIKSAAN LOGIN DIJALANKAN");
+  alert("AUTH KOSONG. PROJECT: " + auth.app.options.projectId);
   return;
 }
         const userRef = doc(db, "users", user.uid);
