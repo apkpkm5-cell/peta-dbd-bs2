@@ -143,6 +143,7 @@ document.getElementById("loginForm")
   const pesan = document.getElementById("pesan");
 
   pesan.textContent = "Sedang memeriksa akun...";
+  alert("TOMBOL LOGIN BERJALAN");
 
   try {
 await setPersistence(auth, browserLocalPersistence);
