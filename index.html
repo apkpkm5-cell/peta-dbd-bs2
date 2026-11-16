@@ -258,13 +258,7 @@ import {
         const user = auth.currentUser;
 
         if (!user) {
-  document.body.innerHTML = `
-    <h2>TES KONEKSI FIREBASE</h2>
-    <p style="color:red">
-      AUTH KOSONG: Firebase belum membaca sesi login.
-    </p>
-    <p>Halaman ditahan agar tidak kembali ke login.</p>
-  `;
+  alert("PEMERIKSAAN LOGIN DIJALANKAN");
   return;
 }
         const userRef = doc(db, "users", user.uid);
