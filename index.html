@@ -229,9 +229,7 @@ import {
 
     const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-    await setPersistence(auth, browserLocalPersistence);
 const db = getFirestore(app);
-
 let kasusCol = null;
     // 1. Inisialisasi Peta di Puskesmas Bontang Selatan II (Berbas Tengah)
     const pkmCoords = [0.1118, 117.4868];
