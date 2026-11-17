@@ -197,20 +197,17 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Firebase SDK (Modular) -->
+        <!-- Firebase SDK (Modular) -->
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, onSnapshot, doc,
-      updateDoc, deleteDoc, serverTimestamp
+      getDoc, updateDoc, deleteDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-    // Jalankan penjaga sesi dari file auth-guard.js di folder yang sama.
-    import "./auth-guard.js";
-
     const firebaseConfig = {
-      apiKey: "AIzaSyA9vLsY0D2ahTZ2sWQXnqiIOt39uoOZmo",
+      apiKey: "ISI_DENGAN_API_KEY_ASLI_KAMU",
       authDomain: "dbd-pkm-bs2.firebaseapp.com",
       projectId: "dbd-pkm-bs2",
       storageBucket: "dbd-pkm-bs2.firebasestorage.app",
@@ -219,16 +216,8 @@
       measurementId: "G-PCZP880K6Y"
     };
 
-    // auth-guard.js mungkin sudah menginisialisasi Firebase App.
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    await auth.authStateReady();
-
-alert(
-  "PEMERIKSAAN INDEX\n" +
-  "UID INDEX: " +
-  (auth.currentUser ? auth.currentUser.uid : "KOSONG")
-);
     const db = getFirestore(app);
     let kasusCol = null;
 
@@ -257,33 +246,56 @@ alert(
       window.addEventListener('resize', () => map.invalidateSize());
     }
 
-    // Sinyal ini dikirim auth-guard setelah akun dan role tervalidasi.
-    document.addEventListener("pkm-auth-ready", () => {
-      tampilkanHalaman();
-      kasusCol = collection(db, "kasus_dbd_bs2");
+    // 2. Cek Sesi Login & Hak Akses Secara Langsung (Menggantikan auth-guard.js)
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // Jika belum login, langsung arahkan ke login.html
+        window.location.replace("login.html");
+        return;
+      }
 
-      onSnapshot(kasusCol, (snapshot) => {
-        currentCases = [];
-        snapshot.forEach((docSnap) => {
-          currentCases.push({ id: docSnap.id, ...docSnap.data() });
+      try {
+        // Cek dokumen role pengguna di Firestore
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        if (!userSnap.exists()) {
+          await signOut(auth);
+          alert("Data hak akses pengguna belum tersedia.");
+          window.location.replace("login.html");
+          return;
+        }
+
+        const userData = userSnap.data();
+        if (userData.role !== "admin" && userData.role !== "petugas") {
+          await signOut(auth);
+          alert("Hak akses tidak dikenali.");
+          window.location.replace("login.html");
+          return;
+        }
+
+        // Akun valid: Tampilkan layar dan mulai ambil data kasus DBD
+        tampilkanHalaman();
+        kasusCol = collection(db, "kasus_dbd_bs2");
+
+        onSnapshot(kasusCol, (snapshot) => {
+          currentCases = [];
+          snapshot.forEach((docSnap) => {
+            currentCases.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          document.getElementById("dbStatus").innerText = "Terhubung (Cloud Aktif)";
+          document.getElementById("dbStatus").style.color = "#16a34a";
+          renderMapAndStats();
+        }, (error) => {
+          document.getElementById("dbStatus").innerText =
+            "Gagal membaca Cloud: " + (error.code || error.message);
+          document.getElementById("dbStatus").style.color = "#dc2626";
+          console.error("Firestore kasus:", error);
         });
-        document.getElementById("dbStatus").innerText = "Terhubung (Cloud Aktif)";
-        document.getElementById("dbStatus").style.color = "#16a34a";
-        renderMapAndStats();
-      }, (error) => {
-        document.getElementById("dbStatus").innerText =
-          "Gagal membaca Cloud: " + (error.code || error.message);
-        document.getElementById("dbStatus").style.color = "#dc2626";
-        console.error("Firestore kasus:", error);
-      });
-    });
 
-    // Jika sesi kosong atau pemeriksaan gagal, tampilkan halaman dan alasannya.
-    document.addEventListener("pkm-auth-error", (event) => {
-      tampilkanHalaman();
-      const pesan = event.detail?.message || "Pemeriksaan akun gagal.";
-      document.getElementById("dbStatus").innerText = pesan;
-      document.getElementById("dbStatus").style.color = "#dc2626";
+      } catch (err) {
+        tampilkanHalaman();
+        document.getElementById("dbStatus").innerText = "Error validasi akun: " + err.message;
+        document.getElementById("dbStatus").style.color = "#dc2626";
+      }
     });
 
     // 3. Render Titik Peta & Rekap per RT
@@ -304,7 +316,6 @@ alert(
         const color = item.status === "Aktif" ? "#dc2626" : "#16a34a";
         const nextStatus = item.status === "Aktif" ? "Ditangani" : "Aktif";
 
-        // Lingkaran Radius 100m
         L.circle([item.lat, item.lng], {
           color: color,
           fillColor: color,
@@ -312,7 +323,6 @@ alert(
           radius: 100
         }).addTo(markersLayer);
 
-        // Titik Kasus
         const marker = L.circleMarker([item.lat, item.lng], {
           radius: 8,
           fillColor: color,
@@ -333,119 +343,109 @@ alert(
           <button onclick="window.hapusKasus('${item.id}')" style="background:#b91c1c;color:white;">Hapus</button>
         `);
       });
-document.getElementById('totalTitik').innerText = areaCases.length;
-document.getElementById('totalKasus').innerText = totalKasus;
-document.getElementById('kasusAktif').innerText = aktifCount;
-const listEl = document.getElementById('rekapRtList');
-listEl.innerHTML = "";
-const entries = Object.entries(rekapMap);
-if (entries.length === 0) {
-listEl.innerHTML = "Belum ada data tercatat.";
-} else {
-entries.forEach(([wil, jml]) => {
-const li = document.createElement('li');
-li.innerHTML = `${wil}: <b>${jml} kasus</b>`;
-listEl.appendChild(li);
-});
-}
-}
-// 4. Klik Peta untuk Ambil Koordinat
-map.on('click', function(e) {
-const { lat, lng } = e.latlng;
-document.getElementById('koordinat').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-if (tempMarker) map.removeLayer(tempMarker);
-tempMarker = L.marker([lat, lng]).addTo(map).bindPopup("Titik baru dipilih").openPopup();
-});
-// 5. Simpan Data Baru ke Firebase (CREATE)
-document.getElementById('caseForm').addEventListener('submit', async function(e) {
-e.preventDefault();
-const coords = document.getElementById('koordinat').value.split(',');
-if (!auth.currentUser || !kasusCol) return alert("Sesi login belum siap. Silakan login kembali.");
-if (coords.length !== 2) return alert("Silakan klik lokasi pada peta terlebih dahulu!");
-const btn = document.getElementById('btnSubmit');
-btn.disabled = true;
-btn.innerText = "Menyimpan...";
-try {
-await addDoc(kasusCol, {
-kelurahan: document.getElementById('kelurahan').value,
-rtJalan: document.getElementById('rtJalan').value,
-nomorRumah: document.getElementById('nomorRumah').value,
-tanggal: document.getElementById('tanggal').value,
-jumlah: parseInt(document.getElementById('jumlah').value),
-status: document.getElementById('status').value,
-lat: parseFloat(coords[0].trim()),
-lng: parseFloat(coords[1].trim()),
-createdAt: serverTimestamp()
-});
-if (tempMarker) map.removeLayer(tempMarker);
-this.reset();
-} catch (err) {
-alert("Gagal menyimpan data: " + err.message);
-} finally {
-btn.disabled = false;
-btn.innerText = "Simpan Titik Kasus";
-}
-});
-// 6. Update Status Penanganan di Firebase (UPDATE)
-window.ubahStatus = async function(id, statusBaru) {
-if (!auth.currentUser) return alert('Silakan login kembali.');
-try {
-await updateDoc(doc(db, "kasus_dbd_bs2", id), { status: statusBaru });
-} catch (err) {
-alert("Gagal mengubah status: " + err.message);
-}
-};
-// 7. Hapus Titik dari Firebase (DELETE)
-window.hapusKasus = async function(id) {
-if (!auth.currentUser) return alert('Silakan login kembali.');
-if (confirm("Yakin ingin menghapus titik kasus ini?")) {
-try {
-await deleteDoc(doc(db, "kasus_dbd_bs2", id));
-} catch (err) {
-alert("Gagal menghapus data: " + err.message);
-}
-}
-};
-// 8. Tombol Isi Contoh Simulasi Awal
-window.isiDataSimulasi = async function() {
-if (!auth.currentUser || !kasusCol) return alert('Silakan login kembali.');
-if (!confirm("Tambahkan 1 titik contoh SIMULASI di Berbas Tengah?")) return;
-const contoh = [
-{ kelurahan: "Berbas Tengah", rtJalan: "RT 02 (SIMULASI)", nomorRumah: "12 (SIMULASI)", tanggal: new Date().toISOString().slice(0, 10), jumlah: 1, status: "Aktif", lat: 0.1125, lng: 117.4855 }
-];
-for (const item of contoh) {
-await addDoc(kasusCol, { ...item, createdAt: serverTimestamp() });
-}
-};
-// Keluar dari akun
-window.keluarAkun = async function() {
-  try {
-    await signOut(auth);
-    window.location.replace("login.html");
-  } catch (error) {
-    alert("Gagal keluar: " + error.message);
-  }
-};
 
-// 9. Ekspor ke CSV / Excel
-window.exportToCSV = function() {
-if (!auth.currentUser) return alert("Silakan login kembali.");
-let csvContent = "data:text/csv;charset=utf-8,Kelurahan,RT/Jalan,Nomor Rumah,Tanggal,Jumlah Kasus,Status,Latitude,Longitude\n";
-currentCases.filter(row => row.kelurahan === "Berbas Tengah").forEach(row => {
-csvContent += `"${row.kelurahan}","${row.rtJalan}","${row.nomorRumah || ""}","${row.tanggal}",${row.jumlah},"${row.status}",${row.lat},${row.lng}\n`;
-});
-const encodedUri = encodeURI(csvContent);
-const link = document.createElement("a");
-link.setAttribute("href", encodedUri);
-link.setAttribute("download", "Laporan_DBD_Puskesmas_Bontang_Selatan_2.csv");
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
-};
+      document.getElementById('totalTitik').innerText = areaCases.length;
+      document.getElementById('totalKasus').innerText = totalKasus;
+      document.getElementById('kasusAktif').innerText = aktifCount;
+      const listEl = document.getElementById('rekapRtList');
+      listEl.innerHTML = "";
+      const entries = Object.entries(rekapMap);
+      if (entries.length === 0) {
+        listEl.innerHTML = "<li>Belum ada data tercatat.</li>";
+      } else {
+        entries.forEach(([wil, jml]) => {
+          const li = document.createElement('li');
+          li.innerHTML = `${wil}: <b>${jml} kasus</b>`;
+          listEl.appendChild(li);
+        });
+      }
+    }
 
+    // 4. Klik Peta untuk Ambil Koordinat
+    map.on('click', function(e) {
+      const { lat, lng } = e.latlng;
+      document.getElementById('koordinat').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      if (tempMarker) map.removeLayer(tempMarker);
+      tempMarker = L.marker([lat, lng]).addTo(map).bindPopup("Titik baru dipilih").openPopup();
+    });
 
+    // 5. Simpan Data Baru ke Firebase (CREATE)
+    document.getElementById('caseForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const coords = document.getElementById('koordinat').value.split(',');
+      if (!auth.currentUser || !kasusCol) return alert("Sesi login belum siap. Silakan login kembali.");
+      if (coords.length !== 2) return alert("Silakan klik lokasi pada peta terlebih dahulu!");
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = "Menyimpan...";
+      try {
+        await addDoc(kasusCol, {
+          kelurahan: document.getElementById('kelurahan').value,
+          rtJalan: document.getElementById('rtJalan').value,
+          nomorRumah: document.getElementById('nomorRumah').value,
+          tanggal: document.getElementById('tanggal').value,
+          jumlah: parseInt(document.getElementById('jumlah').value),
+          status: document.getElementById('status').value,
+          lat: parseFloat(coords[0].trim()),
+          lng: parseFloat(coords[1].trim()),
+          createdAt: serverTimestamp()
+        });
+        if (tempMarker) map.removeLayer(tempMarker);
+        this.reset();
+      } catch (err) {
+        alert("Gagal menyimpan data: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Simpan Titik Kasus";
+      }
+    });
 
+    // 6. Update Status Penanganan di Firebase (UPDATE)
+    window.ubahStatus = async function(id, statusBaru) {
+      if (!auth.currentUser) return alert('Silakan login kembali.');
+      try {
+        await updateDoc(doc(db, "kasus_dbd_bs2", id), { status: statusBaru });
+      } catch (err) {
+        alert("Gagal mengubah status: " + err.message);
+      }
+    };
 
-  </script>
-</body>
-</html>
+    // 7. Hapus Titik dari Firebase (DELETE)
+    window.hapusKasus = async function(id) {
+      if (!auth.currentUser) return alert('Silakan login kembali.');
+      if (confirm("Yakin ingin menghapus titik kasus ini?")) {
+        try {
+          await deleteDoc(doc(db, "kasus_dbd_bs2", id));
+        } catch (err) {
+          alert("Gagal menghapus data: " + err.message);
+        }
+      }
+    };
+
+    // 8. Tombol Isi Contoh Simulasi Awal
+    window.isiDataSimulasi = async function() {
+      if (!auth.currentUser || !kasusCol) return alert('Silakan login kembali.');
+      if (!confirm("Tambahkan 1 titik contoh SIMULASI di Berbas Tengah?")) return;
+      const contoh = [
+        { kelurahan: "Berbas Tengah", rtJalan: "RT 02 (SIMULASI)", nomorRumah: "12 (SIMULASI)", tanggal: new Date().toISOString().slice(0, 10), jumlah: 1, status: "Aktif", lat: 0.1125, lng: 117.4855 }
+      ];
+      for (const item of contoh) {
+        await addDoc(kasusCol, { ...item, createdAt: serverTimestamp() });
+      }
+    };
+
+    // Keluar dari akun
+    window.keluarAkun = async function() {
+      try {
+        await signOut(auth);
+        localStorage.removeItem("pkm_role");
+        localStorage.removeItem("pkm_nama");
+        window.location.replace("login.html");
+      } catch (error) {
+        alert("Gagal keluar: " + error.message);
+      }
+    };
+
+    // 9. Ekspor ke CSV / Excel
+    window.exportToCSV = function() {
+      if (!auth.currentUser) return alert("Silakan login kembali.");
