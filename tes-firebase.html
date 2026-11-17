@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tes Firebase</title>
+</head>
+<body>
+
+<h2>TES KONEKSI FIREBASE CLOUD</h2>
+<p id="hasil">Sedang menghubungkan...</p>
+
+<script type="module">
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+
+import {
+  getFirestore,
+  doc,
+  getDocFromServer
+} from
+"https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA9vLsY0D2ahTZ2sWQXnqiIOt39uoOZmo",
+  authDomain: "dbd-pkm-bs2.firebaseapp.com",
+  projectId: "dbd-pkm-bs2",
+  storageBucket: "dbd-pkm-bs2.firebasestorage.app",
+  messagingSenderId: "108593161566",
+  appId: "1:108593161566:web:cacb600b556b2e8f079bcf",
+  measurementId: "G-PCZP880K6Y"
+};
+
+const hasil = document.getElementById("hasil");
+
+try {
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  await getDocFromServer(
+    doc(db, "tes_koneksi", "ping")
+  );
+
+  hasil.innerHTML =
+    "BERHASIL: FIRESTORE TERHUBUNG KE CLOUD";
+
+} catch (error) {
+  hasil.innerHTML =
+    "GAGAL: " + error.code +
+    "<br>" + error.message;
+
+  console.error(error);
+}
+</script>
+
+</body>
+</html>
