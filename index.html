@@ -449,3 +449,15 @@
     // 9. Ekspor ke CSV / Excel
     window.exportToCSV = function() {
       if (!auth.currentUser) return alert("Silakan login kembali.");
+let csvContent = "data:text/csv;charset=utf-8,Kelurahan,RT/Jalan,Nomor Rumah,Tanggal,Jumlah Kasus,Status,Latitude,Longitude\n";
+currentCases.filter(row => row.kelurahan === "Berbas Tengah").forEach(row => {
+csvContent += "${row.kelurahan}","${row.rtJalan}","${row.nomorRumah || ""}","${row.tanggal}",${row.jumlah},"${row.status}",${row.lat},${row.lng}\n;
+});
+const encodedUri = encodeURI(csvContent);
+const link = document.createElement("a");
+link.setAttribute("href", encodedUri);
+link.setAttribute("download", "Laporan_DBD_Puskesmas_Bontang_Selatan_2.csv");
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+};
