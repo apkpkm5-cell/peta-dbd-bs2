@@ -183,7 +183,18 @@ alert(
     localStorage.setItem("pkm_nama", data.nama || "");
   
     alert("UID LOGIN: " + result.user.uid);
-    window.location.href = "index.html";
+    const kunciSesi =
+  "firebase:authUser:" +
+  auth.config.apiKey +
+  ":" +
+  auth.name;
+
+alert(
+  "TES PENYIMPANAN SESI: " +
+  (localStorage.getItem(kunciSesi) ? "ADA" : "TIDAK ADA")
+);
+
+window.location.href = "index.html";
 
   } catch (error) {
 
