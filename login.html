@@ -153,7 +153,13 @@ await setPersistence(auth, browserLocalPersistence);
       email,
       password
     );
+await auth.authStateReady();
 
+alert(
+  "UID HASIL LOGIN: " + result.user.uid +
+  "\nUID SESI: " +
+  (auth.currentUser ? auth.currentUser.uid : "KOSONG")
+);
     const uid = result.user.uid;
 
     const userRef = doc(db, "users", uid);
